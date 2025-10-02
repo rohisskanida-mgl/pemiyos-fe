@@ -1,3 +1,9 @@
+<script lang="ts">
+export default {
+  name: 'NotificationToast'
+}
+</script>
+
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-vue-next'

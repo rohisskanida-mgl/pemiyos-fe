@@ -76,7 +76,7 @@ const handleDrop = (event: DragEvent) => {
   if (props.disabled) return
 
   const files = event.dataTransfer?.files
-  if (files && files.length > 0) {
+  if (files && files.length > 0 && files[0]) {
     handleFileSelect(files[0])
   }
 }
@@ -95,8 +95,17 @@ const handleDragLeave = () => {
 const handleFileInput = (event: Event) => {
   const target = event.target as HTMLInputElement
   const files = target.files
-  if (files && files.length > 0) {
+  if (files && files.length > 0 && files[0]) {
     handleFileSelect(files[0])
+  }
+}
+
+const handleUploadClick = () => {
+  if (!props.disabled) {
+    const fileInput = document.getElementById('file-input') as HTMLInputElement
+    if (fileInput) {
+      fileInput.click()
+    }
   }
 }
 
@@ -129,7 +138,7 @@ const formatFileSize = (bytes: number): string => {
       @drop="handleDrop"
       @dragover="handleDragOver"
       @dragleave="handleDragLeave"
-      @click="!disabled && document.getElementById('file-input')?.click()"
+      @click="handleUploadClick"
     >
       <input
         id="file-input"

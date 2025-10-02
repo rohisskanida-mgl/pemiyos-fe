@@ -1,5 +1,5 @@
 // API Response Types
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data?: T
   error?: string
   message?: string
@@ -168,5 +168,5 @@ export interface QueryParams {
   page?: number
   is_count?: boolean
   include_relations?: boolean
-  [key: string]: any
+  [key: string]: unknown
 }

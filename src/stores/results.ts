@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { resultsService, votingService, usersService } from '@/services/api'
-import type { VoteStatistics, NonVotersResponse, Position } from '@/types/api.types'
 
 export interface CandidateResult {
   candidateId: number
@@ -122,7 +121,12 @@ export const useResultsStore = defineStore('results', () => {
       
       // Load statistics for each position
       for (const position of positionsResponse.data) {
-        const statistics = await resultsService.getPositionStatistics(position.position_id)
+        const positionId = position.positionId || position.position_id
+        if (!positionId) {
+          console.warn('Position missing ID:', position)
+          continue
+        }
+        const statistics = await resultsService.getPositionStatistics(positionId)
         
         const candidates: CandidateResult[] = statistics.data.map(candidate => ({
           candidateId: 0, // API doesn't return candidate ID in statistics
@@ -143,15 +147,15 @@ export const useResultsStore = defineStore('results', () => {
           : undefined
         
         positionResults.push({
-          positionId: position.position_id,
-          positionTitle: position.name,
-          totalVotes: statistics.total_votes,
+          positionId: positionId,
+          positionTitle: position.title || position.name || 'Unknown Position',
+          totalVotes: statistics.total_votes || 0,
           candidates,
           winner,
           isComplete: true
         })
         
-        totalVotesCount += statistics.total_votes
+        totalVotesCount += statistics.total_votes || 0
       }
       
       // Calculate overall participation
@@ -168,8 +172,8 @@ export const useResultsStore = defineStore('results', () => {
 
       results.value = mockResults
       lastUpdated.value = new Date()
-    } catch (err: any) {
-      error.value = err.message || 'Failed to load voting results'
+    } catch (err: unknown) {
+      error.value = (err as Error).message || 'Failed to load voting results'
       console.error('Error loading results:', err)
     } finally {
       isLoading.value = false
@@ -215,6 +219,7 @@ export const useResultsStore = defineStore('results', () => {
       results.value.participationRate = (results.value.totalVotes / results.value.totalVoters) * 100
 
     } catch (err) {
+      console.error('Error refreshing results:', err)
       error.value = 'Terjadi kesalahan saat memperbarui hasil'
     } finally {
       isLoading.value = false
@@ -248,6 +253,7 @@ export const useResultsStore = defineStore('results', () => {
 
       return true
     } catch (err) {
+      console.error(`Error exporting results as ${format}:`, err)
       error.value = `Terjadi kesalahan saat mengexport hasil sebagai ${format}`
       return false
     } finally {
@@ -299,6 +305,7 @@ Laporan ini dibuat pada: ${new Date().toLocaleString('id-ID')}
 
       return report
     } catch (err) {
+      console.error('Error generating report:', err)
       error.value = 'Terjadi kesalahan saat membuat laporan'
       return null
     } finally {

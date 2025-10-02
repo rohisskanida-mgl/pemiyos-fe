@@ -107,11 +107,11 @@ const { toasts, dismiss } = useToast()
 
     <!-- Main Content -->
     <main
-      :class="
-        shouldShowNavbar
-          ? 'pt-16 min-h-screen max-w-[430px] mx-auto'
-          : 'min-h-screen max-w-[430px] mx-auto'
-      "
+      :class="[
+        'min-h-screen',
+        shouldShowNavbar ? 'pt-16' : '',
+        route.name === 'results' ? 'w-full' : 'max-w-[430px] mx-auto'
+      ]"
     >
       <RouterView />
     </main>

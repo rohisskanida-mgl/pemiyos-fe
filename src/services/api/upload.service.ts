@@ -5,7 +5,7 @@ class UploadService {
   /**
    * Get upload configuration info
    */
-  async getUploadInfo(): Promise<any> {
+  async getUploadInfo(): Promise<{ maxSize: number; allowedTypes: string[] }> {
     const response = await apiClient.get('/api/upload/info')
     return response.data
   }

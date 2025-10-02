@@ -53,19 +53,19 @@ const applyQuickFilter = (filter: string) => {
 
   switch (filter) {
     case 'today':
-      dateFrom.value = startOfDay.toISOString().split('T')[0]
-      dateTo.value = today.toISOString().split('T')[0]
+      dateFrom.value = startOfDay.toISOString().split('T')[0] || ''
+      dateTo.value = today.toISOString().split('T')[0] || ''
       break
     case 'week':
       const startOfWeek = new Date(today)
       startOfWeek.setDate(today.getDate() - today.getDay())
-      dateFrom.value = startOfWeek.toISOString().split('T')[0]
-      dateTo.value = today.toISOString().split('T')[0]
+      dateFrom.value = startOfWeek.toISOString().split('T')[0] || ''
+      dateTo.value = today.toISOString().split('T')[0] || ''
       break
     case 'month':
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
-      dateFrom.value = startOfMonth.toISOString().split('T')[0]
-      dateTo.value = today.toISOString().split('T')[0]
+      dateFrom.value = startOfMonth.toISOString().split('T')[0] || ''
+      dateTo.value = today.toISOString().split('T')[0] || ''
       break
   }
 }

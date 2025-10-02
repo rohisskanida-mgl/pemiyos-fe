@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+// import { computed } from 'vue' // Removed unused import
 import { Users, Info, Check } from 'lucide-vue-next'
 
 interface Props {
@@ -17,7 +17,7 @@ const emit = defineEmits<{
   info: []
 }>()
 
-const badgeClasses = computed(() => (props.voted ? 'text-success-accent' : 'text-text-dark'))
+// Removed unused badgeClasses computed property
 </script>
 
 <template>

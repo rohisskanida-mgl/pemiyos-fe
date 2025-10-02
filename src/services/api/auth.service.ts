@@ -26,6 +26,7 @@ class AuthService {
       const user = await this.getProfile()
       return user
     } catch (error) {
+      console.error("Error: ", error)
       return null
     }
   }

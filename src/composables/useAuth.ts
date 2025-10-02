@@ -1,12 +1,12 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore, type User, type LoginCredentials, type ProfileUpdate } from '@/stores/auth'
+import { useAuthStore, type LoginCredentials, type ProfileUpdate } from '@/stores/auth'
 import { useToast } from './useToast'
 
 export function useAuth() {
   const authStore = useAuthStore()
   const router = useRouter()
-  const { success, error } = useToast()
+  const { success: successToast, error } = useToast()
 
   // Computed properties
   const user = computed(() => authStore.user)
@@ -22,13 +22,14 @@ export function useAuth() {
     try {
       const success = await authStore.login(credentials)
       if (success) {
-        success('Login berhasil!')
+        successToast('Login berhasil!')
         return true
       } else {
         error(authStore.error || 'Login gagal')
         return false
       }
     } catch (err) {
+      console.error("Error: ", err);
       error('Terjadi kesalahan saat login')
       return false
     }
@@ -37,9 +38,10 @@ export function useAuth() {
   const logout = async (): Promise<void> => {
     try {
       await authStore.logout()
-      success('Logout berhasil')
+      successToast('Logout berhasil')
       router.push('/login')
     } catch (err) {
+      console.error("Error: ", err);
       error('Terjadi kesalahan saat logout')
     }
   }
@@ -48,13 +50,14 @@ export function useAuth() {
     try {
       const success = await authStore.updateProfile(profileData)
       if (success) {
-        success('Profil berhasil diperbarui')
+        successToast('Profil berhasil diperbarui')
         return true
       } else {
         error(authStore.error || 'Gagal memperbarui profil')
         return false
       }
     } catch (err) {
+      console.error("Error: ", err);
       error('Terjadi kesalahan saat memperbarui profil')
       return false
     }
@@ -64,6 +67,7 @@ export function useAuth() {
     try {
       return await authStore.checkAuth()
     } catch (err) {
+      console.error("Error: ", err);
       error('Terjadi kesalahan saat memeriksa autentikasi')
       return false
     }
@@ -100,7 +104,7 @@ export function useAuth() {
 
   // User role helpers
   const hasRole = (role: 'Admin' | 'User'): boolean => {
-    return userRole.value === role
+    return userRole.value === role as typeof userRole.value
   }
 
   const isUser = (): boolean => {
@@ -115,7 +119,7 @@ export function useAuth() {
 
   // User data helpers
   const getUserDisplayName = (): string => {
-    return user.value?.fullName || user.value?.username || 'Unknown User'
+    return user.value?.fullName || 'Unknown User'
   }
 
   const getUserInitials = (): string => {
@@ -142,6 +146,7 @@ export function useAuth() {
     try {
       return await checkAuth()
     } catch (err) {
+      console.error("Error: ", err);
       return false
     }
   }

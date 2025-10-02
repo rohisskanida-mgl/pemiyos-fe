@@ -44,7 +44,7 @@ class UsersService {
    */
   async updateUser(id: string, userData: Partial<User>): Promise<User> {
     // Remove read-only fields
-    const { _id, created_at, ...updateData } = userData
+    const { _id, ...updateData } = userData
     const response = await apiClient.put<User>(`/api/users/${id}`, updateData)
     return response.data
   }

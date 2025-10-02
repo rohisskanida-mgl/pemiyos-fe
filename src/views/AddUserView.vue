@@ -104,21 +104,21 @@ const handleSubmit = async () => {
     await usersService.createUser(newUser)
     success('Pengguna berhasil ditambahkan!')
     router.push('/users')
-  } catch (err: any) {
-    showError(err.response?.data?.error || 'Gagal menambahkan pengguna')
+  } catch {
+    showError('Gagal menambahkan pengguna')
   } finally {
     isLoading.value = false
   }
 }
 
-const handleFileUpload = async (file: File) => {
+const handleFileUpload = async () => {
   isLoading.value = true
 
   try {
     // Parse Excel file and bulk create users
     // This would require a library like xlsx to parse the file
     showError('Bulk upload belum diimplementasikan')
-  } catch (err: any) {
+  } catch {
     showError('Gagal memproses file')
   } finally {
     isLoading.value = false
@@ -176,6 +176,7 @@ const goBack = () => {
         >
           Form
         </button>
+        <!-- Temporarily hidden - Excel upload not working properly
         <button
           @click="activeTab = 'excel'"
           :class="[
@@ -187,6 +188,7 @@ const goBack = () => {
         >
           Excel
         </button>
+        -->
       </div>
 
       <!-- Tab Content -->
@@ -299,7 +301,7 @@ const goBack = () => {
           </form>
         </div>
 
-        <!-- Excel Tab -->
+        <!-- Excel Tab - Temporarily hidden
         <div v-else>
           <div class="text-center mb-6">
             <h3 class="text-lg font-semibold text-text-dark mb-2">Upload File Excel</h3>
@@ -316,10 +318,11 @@ const goBack = () => {
 
           <FileUpload @file-select="handleFileUpload" @file-clear="handleFileClear" />
         </div>
+        -->
       </div>
     </div>
 
-    <!-- Submit Button for Excel Tab -->
+    <!-- Submit Button for Excel Tab - Temporarily hidden
     <div v-if="activeTab === 'excel'" class="flex justify-end">
       <button
         @click="handleFileUpload"
@@ -327,8 +330,9 @@ const goBack = () => {
         class="px-6 py-3 bg-info-accent text-text-light rounded-lg font-medium hover:brightness-95 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <span v-if="isLoading">Memproses...</span>
-        <span v-else>Tambah</span>
+        <span v-else">Tambah</span>
       </button>
     </div>
+    -->
   </div>
 </template>

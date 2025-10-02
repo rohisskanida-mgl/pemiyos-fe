@@ -1,3 +1,9 @@
+<script lang="ts">
+export default {
+  name: 'AppSidebar'
+}
+</script>
+
 <script setup lang="ts">
 import { computed } from 'vue'
 import {
@@ -9,7 +15,6 @@ import {
   Vote,
   Users,
   UserPlus,
-  UserEdit,
 } from 'lucide-vue-next'
 
 interface Props {
@@ -34,8 +39,9 @@ const navigationItems = [
   { id: 'vote', label: 'Voting', icon: Vote, route: '/vote' },
   { id: 'results', label: 'Results', icon: BarChart3, route: '/results' },
   { id: 'settings', label: 'Settings', icon: Settings, route: '/settings' },
-  { id: 'users', label: 'User Management', icon: Users, route: '/users' },
-  { id: 'add-user', label: 'Add User', icon: UserPlus, route: '/users/add' },
+  // Temporarily hidden - not working properly
+  // { id: 'users', label: 'User Management', icon: Users, route: '/users' },
+  // { id: 'add-user', label: 'Add User', icon: UserPlus, route: '/users/add' },
 ]
 
 const handleBackdropClick = () => {

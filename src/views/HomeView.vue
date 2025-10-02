@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { Users, Briefcase, CheckCircle, Clock, Shield, Smartphone, Loader2 } from 'lucide-vue-next'
+import { Users, Briefcase, CheckCircle, Clock, Shield, Smartphone } from 'lucide-vue-next'
 import AppFooter from '@/components/Footer.vue'
 import { usersService, votingService, resultsService } from '@/services/api'
 
@@ -40,9 +40,9 @@ const loadStatistics = async () => {
     let votedCount = 0
     for (const position of positionsResponse.data) {
       try {
-        const stats = await resultsService.getPositionStatistics(position.position_id)
+        const stats = await resultsService.getPositionStatistics(position.position_id!)
         votedCount += stats.total_votes
-      } catch (err) {
+      } catch {
         // Continue even if one position fails
       }
     }

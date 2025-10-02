@@ -3,9 +3,7 @@ import { ref, computed } from 'vue'
 import { votingService } from '@/services/api'
 import { useAuthStore } from './auth'
 import type { 
-  Position as ApiPosition, 
   Candidate as ApiCandidate, 
-  Vote as ApiVote,
   Election
 } from '@/types/api.types'
 
@@ -48,7 +46,6 @@ export interface VotingStatus {
 }
 
 export const useVotingStore = defineStore('voting', () => {
-  const authStore = useAuthStore()
   
   // State
   const positions = ref<Position[]>([])
@@ -66,16 +63,22 @@ export const useVotingStore = defineStore('voting', () => {
   const error = ref<string | null>(null)
 
   // Helper functions to transform API data
-  const transformPosition = (apiPosition: any): Position => {
+  const transformPosition = (apiPosition: Record<string, unknown> | Position): Position => {
+    // If it's already a Position type, return it as is
+    if ('id' in apiPosition && 'positionId' in apiPosition && 'title' in apiPosition) {
+      return apiPosition as Position
+    }
+    
+    // Otherwise, transform from API format
     return {
-      id: apiPosition.id || apiPosition._id,
-      positionId: apiPosition.positionId || apiPosition.position_id,
-      title: apiPosition.title || apiPosition.name,
-      description: apiPosition.description,
-      candidatesCount: apiPosition.candidatesCount || 0,
-      isActive: apiPosition.isActive !== undefined ? apiPosition.isActive : (apiPosition.status === 'active'),
-      votingStartDate: apiPosition.votingStartDate,
-      votingEndDate: apiPosition.votingEndDate,
+      id: String(apiPosition.id || apiPosition._id || ''),
+      positionId: Number(apiPosition.positionId || apiPosition.position_id || 0),
+      title: String(apiPosition.title || apiPosition.name || ''),
+      description: apiPosition.description as string | undefined,
+      candidatesCount: Number(apiPosition.candidatesCount || 0),
+      isActive: Boolean(apiPosition.isActive !== undefined ? apiPosition.isActive : (apiPosition.status === 'active')),
+      votingStartDate: apiPosition.votingStartDate as string | undefined,
+      votingEndDate: apiPosition.votingEndDate as string | undefined,
     }
   }
 
@@ -125,7 +128,7 @@ export const useVotingStore = defineStore('voting', () => {
 
   // Group candidates by position for easier access
   const candidatesByPosition = computed(() => {
-    const grouped: Record<number, any[]> = {}
+    const grouped: Record<number, Candidate[]> = {}
     candidates.value.forEach(candidate => {
       if (!grouped[candidate.positionId]) {
         grouped[candidate.positionId] = []
@@ -157,7 +160,7 @@ export const useVotingStore = defineStore('voting', () => {
         limit: 'no_limit' 
       })
       
-      const transformedPositions = response.data.map(transformPosition)
+      const transformedPositions = response.data.map((pos: any) => transformPosition(pos))
       
       // Calculate candidates count for each position
       for (const position of transformedPositions) {
@@ -166,11 +169,49 @@ export const useVotingStore = defineStore('voting', () => {
       }
       
       positions.value = transformedPositions
-    } catch (err: any) {
-      error.value = err.message || 'Failed to load positions'
+    } catch (err: unknown) {
+      error.value = (err as Error).message || 'Failed to load positions'
       console.error('Error loading positions:', err)
     } finally {
       isLoading.value = false
+    }
+  }
+
+  const loadSinglePosition = async (positionId: number): Promise<void> => {
+    try {
+      // Check if position is already loaded
+      const existingPosition = positions.value.find(p => p.positionId === positionId)
+      if (existingPosition) {
+        return // Position already loaded
+      }
+
+      // Load positions with filter to find the specific position
+      // We can't use getPosition(id) because it expects MongoDB _id, not positionId
+      const response = await votingService.getPositions({ 
+        status: 'active',
+        limit: 'no_limit' 
+      })
+      
+      // Find the position with matching positionId
+      const targetPosition = response.data.find((pos: any) => 
+        Number(pos.positionId || pos.position_id) === positionId
+      )
+      
+      if (targetPosition) {
+        const transformedPosition = transformPosition(targetPosition as unknown as Record<string, unknown>)
+        
+        // Get candidates count for this position
+        const candidatesResponse = await votingService.getCandidatesByPosition(positionId, false)
+        transformedPosition.candidatesCount = candidatesResponse.length
+        
+        // Add to positions array if not already present
+        if (!positions.value.find(p => p.positionId === positionId)) {
+          positions.value.push(transformedPosition)
+        }
+      }
+    } catch (err: unknown) {
+      console.error('Error loading single position:', err)
+      // Don't throw error to avoid breaking the component
     }
   }
 
@@ -197,8 +238,8 @@ export const useVotingStore = defineStore('voting', () => {
         })
         candidates.value = response.data.map(transformCandidate)
       }
-    } catch (err: any) {
-      error.value = err.message || 'Failed to load candidates'
+    } catch (err: unknown) {
+      error.value = (err as Error).message || 'Failed to load candidates'
       console.error('Error loading candidates:', err)
     } finally {
       isLoading.value = false
@@ -245,8 +286,8 @@ export const useVotingStore = defineStore('voting', () => {
       votingStatus.value.hasVoted = votedPositions.value.length > 0
 
       return true
-    } catch (err: any) {
-      error.value = err.response?.data?.error || 'Failed to submit vote'
+    } catch (err: unknown) {
+      error.value = (err as { response?: { data?: { error?: string } } }).response?.data?.error || 'Failed to submit vote'
       return false
     } finally {
       isLoading.value = false
@@ -328,15 +369,15 @@ export const useVotingStore = defineStore('voting', () => {
 
         votingStatus.value.hasVoted = selectedVotes.value.size > 0
       }
-    } catch (err: any) {
-      error.value = err.message || 'Failed to load voting data'
+    } catch (err: unknown) {
+      error.value = (err as Error).message || 'Failed to load voting data'
       console.error('Error loading voting data:', err)
     } finally {
       isLoading.value = false
     }
   }
 
-  const getUserVotes = async (): Promise<any[]> => {
+  const getUserVotes = async (): Promise<Array<{ position_id: number; candidate_id: string; created_at?: string }>> => {
     try {
       const authStore = useAuthStore()
       if (!authStore.user?.id || !currentElection.value) {
@@ -387,6 +428,7 @@ export const useVotingStore = defineStore('voting', () => {
     
     // Actions
     loadPositions,
+    loadSinglePosition,
     loadCandidates,
     submitVote,
     removeVote,

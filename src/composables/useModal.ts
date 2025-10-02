@@ -7,7 +7,7 @@ export interface ModalOptions {
   persistent?: boolean
   centered?: boolean
   scrollable?: boolean
-  data?: any
+  data?: Record<string, unknown>
 }
 
 export interface ModalState {

@@ -1,4 +1,10 @@
-<script setup lang="ts" name="AppFooter">
+<script lang="ts">
+export default {
+  name: 'AppFooter'
+}
+</script>
+
+<script setup lang="ts">
 interface Props {
   version?: string
   organization?: string

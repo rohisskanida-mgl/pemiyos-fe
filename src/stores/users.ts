@@ -204,6 +204,7 @@ export const useUserStore = defineStore('users', () => {
         totalPages: Math.ceil(filteredUsers.value.length / limit),
       }
     } catch (err) {
+      console.error("Error: ", err);
       error.value = 'Terjadi kesalahan saat memuat data pengguna'
     } finally {
       isLoading.value = false
@@ -243,6 +244,7 @@ export const useUserStore = defineStore('users', () => {
       users.value.push(newUser)
       return newUser
     } catch (err) {
+      console.error("Error: ", err);
       error.value = 'Terjadi kesalahan saat membuat pengguna'
       return null
     } finally {
@@ -265,14 +267,19 @@ export const useUserStore = defineStore('users', () => {
       }
 
       // Update user
-      users.value[userIndex] = {
-        ...users.value[userIndex],
-        ...updateData,
-        updatedAt: new Date().toISOString(),
+      const currentUser = users.value[userIndex]
+      if (currentUser) {
+        users.value[userIndex] = {
+          ...currentUser,
+          ...updateData,
+          id: currentUser.id,
+          updatedAt: new Date().toISOString(),
+        }
+        return users.value[userIndex] || null
       }
-
-      return users.value[userIndex]
+      return null
     } catch (err) {
+      console.error("Error: ", err);
       error.value = 'Terjadi kesalahan saat memperbarui pengguna'
       return null
     } finally {
@@ -295,7 +302,8 @@ export const useUserStore = defineStore('users', () => {
       }
 
       // Prevent deleting admin users
-      if (users.value[userIndex].role === 'Admin') {
+      const userToDelete = users.value[userIndex]
+      if (userToDelete && userToDelete.role === 'Admin') {
         error.value = 'Tidak dapat menghapus pengguna admin'
         return false
       }
@@ -303,6 +311,7 @@ export const useUserStore = defineStore('users', () => {
       users.value.splice(userIndex, 1)
       return true
     } catch (err) {
+      console.error("Error: ", err);
       error.value = 'Terjadi kesalahan saat menghapus pengguna'
       return false
     } finally {
@@ -383,6 +392,7 @@ export const useUserStore = defineStore('users', () => {
           users.value.push(newUser)
           success.push(newUser)
         } catch (err) {
+          console.error("Error: ", err);
           failed.push({
             data: userData,
             error: 'Terjadi kesalahan saat membuat pengguna'
@@ -392,6 +402,7 @@ export const useUserStore = defineStore('users', () => {
 
       return { success, failed }
     } catch (err) {
+      console.error("Error: ", err);
       error.value = 'Terjadi kesalahan saat memproses data pengguna'
       return { success, failed }
     } finally {

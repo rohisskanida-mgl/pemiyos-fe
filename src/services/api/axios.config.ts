@@ -71,7 +71,7 @@ apiClient.interceptors.response.use(
     const authStore = useAuthStore()
     
     if (error.response) {
-      const { status, data } = error.response as any
+      const { status, data } = error.response as { status: number; data?: { error?: string } }
       
       switch (status) {
         case 401:
@@ -128,7 +128,7 @@ apiClient.interceptors.response.use(
 export default apiClient
 
 // Helper function to build query string
-export function buildQueryString(params: Record<string, any>): string {
+export function buildQueryString(params: Record<string, unknown>): string {
   const searchParams = new URLSearchParams()
   
   Object.entries(params).forEach(([key, value]) => {
@@ -142,16 +142,16 @@ export function buildQueryString(params: Record<string, any>): string {
 }
 
 // Helper function to handle paginated responses
-export function extractPaginatedData<T>(response: any): { data: T[]; pagination?: PaginationInfo } {
-  if (response.data && response.data.data && response.data.pagination) {
+export function extractPaginatedData<T>(response: { data?: { data?: T[]; pagination?: PaginationInfo } | T[] }): { data: T[]; pagination?: PaginationInfo } {
+  if (response.data && typeof response.data === 'object' && 'data' in response.data && 'pagination' in response.data) {
     return {
-      data: response.data.data,
+      data: response.data.data || [],
       pagination: response.data.pagination,
     }
   }
   
   return {
-    data: response.data || [],
+    data: Array.isArray(response.data) ? response.data : [],
     pagination: undefined,
   }
 }

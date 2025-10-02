@@ -57,49 +57,56 @@ const chartOptions = computed(() => ({
     legend: {
       position: 'bottom' as const,
       labels: {
-        padding: 20,
+        padding: window.innerWidth >= 1024 ? 24 : 20,
         usePointStyle: true,
         font: {
-          size: 12,
+          size: window.innerWidth >= 1024 ? 14 : 12,
         },
+        boxWidth: window.innerWidth >= 1024 ? 16 : 12,
       },
     },
     tooltip: {
       callbacks: {
-        label: (context: any) => {
+        label: (context: { label?: string; parsed?: number }) => {
           const label = context.label || ''
           const value = context.parsed || 0
           return `${label}: ${value}%`
         },
+      },
+      titleFont: {
+        size: window.innerWidth >= 1024 ? 16 : 14,
+      },
+      bodyFont: {
+        size: window.innerWidth >= 1024 ? 14 : 12,
       },
     },
     title: {
       display: !!props.title,
       text: props.title,
       font: {
-        size: 16,
+        size: window.innerWidth >= 1024 ? 18 : 16,
         weight: 'bold' as const,
       },
-      padding: 20,
+      padding: window.innerWidth >= 1024 ? 24 : 20,
     },
   },
   elements: {
     arc: {
-      borderWidth: 2,
+      borderWidth: window.innerWidth >= 1024 ? 3 : 2,
     },
   },
 }))
 </script>
 
 <template>
-  <div class="bg-text-light rounded-xl shadow-sm p-4">
-    <div class="h-80 w-full">
+  <div class="bg-text-light rounded-xl shadow-sm p-4 lg:p-6">
+    <div class="h-80 lg:h-96 xl:h-[28rem] w-full">
       <Pie :data="chartData" :options="chartOptions" />
     </div>
 
     <!-- Additional info if needed -->
-    <div v-if="data.length === 0" class="flex items-center justify-center h-80 text-text-dark">
-      <p>No data available</p>
+    <div v-if="data.length === 0" class="flex items-center justify-center h-80 lg:h-96 xl:h-[28rem] text-text-dark">
+      <p class="text-lg lg:text-xl">No data available</p>
     </div>
   </div>
 </template>
@@ -108,5 +115,17 @@ const chartOptions = computed(() => ({
 /* Ensure chart container has proper dimensions */
 :deep(.chartjs-render-monitor) {
   max-height: 320px;
+}
+
+@media (min-width: 1024px) {
+  :deep(.chartjs-render-monitor) {
+    max-height: 384px;
+  }
+}
+
+@media (min-width: 1280px) {
+  :deep(.chartjs-render-monitor) {
+    max-height: 448px;
+  }
 }
 </style>

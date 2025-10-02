@@ -1,6 +1,6 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useVotingStore, type Position, type Candidate, type Vote, type VotingStatus } from '@/stores/voting'
+import { useVotingStore, type Position, type Candidate, type Vote } from '@/stores/voting'
 import { useToast } from './useToast'
 import { useAuth } from './useAuth'
 
@@ -24,15 +24,16 @@ export function useVoting() {
   const isVotingComplete = computed(() => votingStore.isVotingComplete)
 
   // Voting actions
-  const submitVote = async (positionId: number, candidateId: number): Promise<boolean> => {
+  // Voting actions
+  const submitVote = async (positionId: number, candidateId: string): Promise<boolean> => {
     if (!isAuthenticated.value) {
       error('Anda harus login untuk melakukan voting')
       return false
     }
 
     try {
-      const success = await votingStore.submitVote(positionId, candidateId)
-      if (success) {
+      const submitResult = await votingStore.submitVote(positionId, candidateId)
+      if (submitResult) {
         success('Vote berhasil disimpan!')
         return true
       } else {
@@ -40,6 +41,7 @@ export function useVoting() {
         return false
       }
     } catch (err) {
+      console.error("Error: ", err);
       error('Terjadi kesalahan saat menyimpan vote')
       return false
     }
@@ -61,6 +63,7 @@ export function useVoting() {
         return false
       }
     } catch (err) {
+      console.error("Error: ", err);
       error('Terjadi kesalahan saat menghapus vote')
       return false
     }
@@ -70,6 +73,7 @@ export function useVoting() {
     try {
       await votingStore.loadVotingData()
     } catch (err) {
+      console.error("Error: ", err);
       error('Gagal memuat data voting')
     }
   }
@@ -97,11 +101,11 @@ export function useVoting() {
   }
 
   const getPositionById = (positionId: number): Position | undefined => {
-    return positions.value.find(p => p.id === positionId)
+    return positions.value.find(p => p.id === String(positionId))
   }
 
   const getCandidateById = (candidateId: number): Candidate | undefined => {
-    return candidates.value.find(c => c.id === candidateId)
+    return candidates.value.find(c => c.id === String(candidateId))
   }
 
   // Voting status helpers
@@ -163,22 +167,22 @@ export function useVoting() {
 
   const getCandidateProfile = (candidateId: number): string | undefined => {
     const candidate = getCandidateById(candidateId)
-    return candidate?.profileHtml
+    return (candidate as any)?.profileHtml
   }
 
   const getCandidateVision = (candidateId: number): string | undefined => {
     const candidate = getCandidateById(candidateId)
-    return candidate?.visionHtml
+    return (candidate as any)?.visionHtml
   }
 
   const getCandidateMission = (candidateId: number): string | undefined => {
     const candidate = getCandidateById(candidateId)
-    return candidate?.missionHtml
+    return (candidate as any)?.missionHtml
   }
 
   const getCandidateProgram = (candidateId: number): string | undefined => {
     const candidate = getCandidateById(candidateId)
-    return candidate?.programHtml
+    return (candidate as any)?.programHtml
   }
 
   // Navigation helpers

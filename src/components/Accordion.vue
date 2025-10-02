@@ -1,3 +1,9 @@
+<script lang="ts">
+export default {
+  name: 'CandidateAccordion'
+}
+</script>
+
 <script setup lang="ts">
 import { ref } from 'vue'
 import { ChevronDown } from 'lucide-vue-next'
@@ -17,7 +23,7 @@ interface Props {
   candidate: Candidate
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
 
 const sections = ref([
   { key: 'profileHtml', title: 'Profil Kandidat', open: false },
@@ -27,7 +33,10 @@ const sections = ref([
 ])
 
 function toggleSection(idx: number) {
-  sections.value[idx].open = !sections.value[idx].open
+  const section = sections.value[idx]
+  if (section) {
+    section.open = !section.open
+  }
 }
 </script>
 

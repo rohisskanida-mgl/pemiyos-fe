@@ -4,18 +4,17 @@ import { useRouter, useRoute } from 'vue-router'
 import { ArrowLeft, ChevronLeft, ChevronRight, Loader2 } from 'lucide-vue-next'
 import CandidateCarousel from '@/components/CandidateCarousel.vue'
 import Accordion from '@/components/Accordion.vue'
-import VoteButton from '@/components/VoteButton.vue'
 import Modal from '@/components/Modal.vue'
 import { useToast } from '@/composables/useToast'
 import { useVotingStore } from '@/stores/voting'
-import { useAuthStore } from '@/stores/auth'
+// import { useAuthStore } from '@/stores/auth' // Removed unused import
 import type { Candidate } from '@/types/api.types'
 
 const router = useRouter()
 const route = useRoute()
 const { success, error: showError } = useToast()
 const votingStore = useVotingStore()
-const authStore = useAuthStore()
+// const authStore = useAuthStore() // Removed unused
 
 const positionId = computed(() => Number(route.params.id))
 const showConfirmModal = ref(false)
@@ -70,6 +69,9 @@ const currentCandidate = computed(() => {
 onMounted(async () => {
   isLoading.value = true
   try {
+    // Load position data if not already loaded (for direct URL access)
+    await votingStore.loadSinglePosition(positionId.value)
+    
     // Load candidates for this position
     await votingStore.loadCandidates(positionId.value)
     
@@ -86,14 +88,14 @@ onMounted(async () => {
         selectedFocused.value = votedIndex
       }
     }
-  } catch (err: any) {
-    showError(err.message || 'Failed to load candidates')
+  } catch (err: unknown) {
+    showError((err as Error).message || 'Failed to load candidates')
   } finally {
     isLoading.value = false
   }
 })
 
-const handleVote = (candidate: any) => {
+const handleVote = (candidate: { id: string; name: string; positionId: number }) => {
   if (!candidate) return
 
   // Find the original candidate data using the transformed id
@@ -101,7 +103,7 @@ const handleVote = (candidate: any) => {
     c => c.id === candidate.id
   )
   if (originalCandidate) {
-    selectedCandidate.value = originalCandidate
+    selectedCandidate.value = originalCandidate as any
     showConfirmModal.value = true
   }
 }
@@ -111,11 +113,11 @@ const confirmVote = async () => {
   
   isSubmitting.value = true
   try {
-    await votingStore.submitVote(positionId.value, selectedCandidate.value.id)
+    await votingStore.submitVote(positionId.value, (selectedCandidate.value as any)._id || (selectedCandidate.value as any).id)
     
     // Update UI to show vote has been cast/changed
     hasVoted.value = true
-    votedCandidateId.value = selectedCandidate.value.id
+    votedCandidateId.value = (selectedCandidate.value as any)._id || (selectedCandidate.value as any).id
     
     success(
       hasVoted.value 
@@ -126,8 +128,8 @@ const confirmVote = async () => {
     
     // Stay on the page to allow changing vote
     // router.push('/vote')
-  } catch (err: any) {
-    showError(err.message || 'Gagal menyimpan vote')
+  } catch (err: unknown) {
+    showError((err as Error).message || 'Gagal menyimpan vote')
   } finally {
     isSubmitting.value = false
   }
@@ -193,11 +195,11 @@ const canGoNext = computed(() => candidates.value.length > 0)
     <!-- Main Content -->
     <div v-else class="flex-1 pb-20">
       <!-- Candidate Carousel -->
-      <CandidateCarousel :candidates="candidates" v-model="selectedFocused" />
+      <CandidateCarousel :candidates="candidates as any" v-model="selectedFocused" />
 
       <!-- Accordion -->
       <div class="px-4 mb-6">
-        <Accordion v-if="currentCandidate" :candidate="currentCandidate" />
+        <Accordion v-if="currentCandidate" :candidate="currentCandidate as any" />
       </div>
     </div>
 
@@ -216,7 +218,7 @@ const canGoNext = computed(() => candidates.value.length > 0)
         <!-- Center Vote Button -->
         <div class="flex-1 max-w-xs mx-4">
           <button
-            @click="handleVote(currentCandidate)"
+            @click="currentCandidate && handleVote(currentCandidate as any)"
             :disabled="isSubmitting || !currentCandidate"
             class="w-full py-3 px-6 rounded-lg font-medium transition-all"
             :class="[
@@ -270,7 +272,7 @@ const canGoNext = computed(() => candidates.value.length > 0)
           <span class="text-xl font-bold text-white">{{ selectedCandidate.name.charAt(0) }}</span>
         </div>
         <h3 class="font-semibold text-text-dark">{{ selectedCandidate.name }}</h3>
-        <p class="text-sm text-text-dark">No. Urut {{ selectedCandidate.positionNumber }}</p>
+        <p class="text-sm text-text-dark">No. Urut {{ (selectedCandidate as any).candidate_number || (selectedCandidate as any).positionNumber }}</p>
       </div>
     </Modal>
   </div>

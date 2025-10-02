@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, Filter, Edit, Trash2, User, Loader2, Search } from 'lucide-vue-next'
+import { Plus, Filter, Edit, Trash2, User, Loader2 } from 'lucide-vue-next'
 import FilterModal from '@/components/FilterModal.vue'
 import { useToast } from '@/composables/useToast'
 import { usersService } from '@/services/api'
@@ -23,7 +23,7 @@ const pagination = ref<PaginationInfo | null>(null)
 const users = ref<ApiUser[]>([])
 
 // Debounce timer for search
-let searchTimer: NodeJS.Timeout | null = null
+let searchTimer: number | null = null
 
 // Load users from API
 const loadUsers = async (page = 1, search = '') => {
@@ -38,8 +38,8 @@ const loadUsers = async (page = 1, search = '') => {
     users.value = response.data
     pagination.value = response.pagination || null
     currentPage.value = page
-  } catch (err: any) {
-    showError(err.message || 'Failed to load users')
+  } catch (err: unknown) {
+    showError((err as Error).message || 'Failed to load users')
   } finally {
     isLoading.value = false
   }
@@ -81,15 +81,15 @@ const handleDeleteUser = async (userId: string, username: string) => {
       success(`User ${username} berhasil dihapus`)
       // Reload users
       await loadUsers(currentPage.value, searchQuery.value)
-    } catch (err: any) {
-      showError(err.message || 'Failed to delete user')
+    } catch (err: unknown) {
+      showError((err as Error).message || 'Failed to delete user')
     } finally {
       isDeleting.value = null
     }
   }
 }
 
-const handleFilterApply = (filters: any) => {
+const handleFilterApply = () => {
   showFilterModal.value = false
 }
 
@@ -120,16 +120,17 @@ const handleFilterReset = () => {
           <User class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-text-dark" />
         </div>
 
-        <!-- Filter Button -->
+        <!-- Filter Button - Temporarily hidden (not working properly)
         <button
           @click="showFilterModal = true"
           class="p-2 rounded-lg border border-divider hover:bg-light-bg transition-colors"
         >
           <Filter class="w-5 h-5 text-text-dark" />
         </button>
+        -->
 
       </div>
-      <!-- Add User Button -->
+      <!-- Add User Button - Temporarily hidden (not working properly)
       <button
         @click="handleAddUser"
         class="px-4 py-2 bg-success-accent text-white rounded-lg hover:brightness-95 transition-colors flex items-center gap-2"
@@ -137,6 +138,7 @@ const handleFilterReset = () => {
         <Plus class="w-4 h-4" />
         Tambah Pengguna
       </button>
+      -->
     </div>
 
     <!-- Loading State -->

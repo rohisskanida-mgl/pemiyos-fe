@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Users, AlertCircle, Check, Loader2 } from 'lucide-vue-next'
 import { useVotingStore } from '@/stores/voting'
@@ -26,7 +26,7 @@ const hasError = computed(() => votingStore.error)
 onMounted(async () => {
   try {
     await votingStore.loadVotingData()
-  } catch (err) {
+  } catch {
     showError('Failed to load voting data')
   }
 })
@@ -39,7 +39,7 @@ const retryLoading = async () => {
   votingStore.clearError()
   try {
     await votingStore.loadVotingData()
-  } catch (err) {
+  } catch {
     showError('Failed to load voting data')
   }
 }

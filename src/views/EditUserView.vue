@@ -3,14 +3,14 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import FormInput from '@/components/FormInput.vue'
 import { useToast } from '@/composables/useToast'
-import { useAuthStore } from '@/stores/auth'
+// import { useAuthStore } from '@/stores/auth' // Removed unused import
 import { usersService } from '@/services/api'
 import type { User } from '@/types/api.types'
 
 const route = useRoute()
 const router = useRouter()
 const { success, error: showError } = useToast()
-const authStore = useAuthStore()
+// const authStore = useAuthStore() // Removed unused
 
 const userId = ref(route.params.id as string)
 const isLoading = ref(false)
@@ -46,8 +46,8 @@ const loadUserData = async () => {
       gender: user.gender,
       status: user.status,
     }
-  } catch (err: any) {
-    showError(err.message || 'Gagal memuat data user')
+  } catch (err: unknown) {
+    showError((err as Error).message || 'Gagal memuat data user')
     router.push('/users')
   } finally {
     isLoading.value = false
@@ -80,8 +80,8 @@ const handleSubmit = async () => {
     await usersService.updateUser(userId.value, updateData)
     success('User berhasil diperbarui!')
     router.push('/users')
-  } catch (err: any) {
-    showError(err.message || 'Gagal memperbarui user')
+  } catch (err: unknown) {
+    showError((err as Error).message || 'Gagal memperbarui user')
   } finally {
     isSubmitting.value = false
   }

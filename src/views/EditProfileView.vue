@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import FormInput from '@/components/FormInput.vue'
 import { useToast } from '@/composables/useToast'
@@ -51,7 +51,7 @@ onMounted(async () => {
       class: user.class || '',
       gender: user.gender,
     }
-  } catch (err: any) {
+  } catch {
     showError('Gagal memuat data profil')
     router.push('/profile')
   } finally {
@@ -82,7 +82,7 @@ const handleSubmit = async () => {
     }
 
     // Get current user ID from auth store
-    const userId = authStore.userInfo._id
+    const userId = (authStore.userInfo as any)._id || authStore.userInfo.nis
     
     await usersService.updateUser(userId, updateData)
     
@@ -91,8 +91,8 @@ const handleSubmit = async () => {
     
     success('Profil berhasil diperbarui')
     router.push('/profile')
-  } catch (err: any) {
-    showError(err.response?.data?.error || 'Gagal memperbarui profil')
+  } catch {
+    showError('Gagal memperbarui profil')
   } finally {
     isSubmitting.value = false
   }

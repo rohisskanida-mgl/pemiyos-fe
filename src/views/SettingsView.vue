@@ -1,37 +1,27 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import FormInput from '@/components/FormInput.vue'
-import FileUpload from '@/components/FileUpload.vue'
-import FilterModal from '@/components/FilterModal.vue'
 import { useToast } from '@/composables/useToast'
 
 const { success, error } = useToast()
 
-// Form data
+// Form data - Only Nama Lengkap and Password
 const formData = ref({
-  name: '',
-  phone: '',
+  nama_lengkap: '',
   password: '',
 })
 
 const formErrors = ref({
-  name: '',
-  phone: '',
+  nama_lengkap: '',
   password: '',
 })
 
-const showFilterModal = ref(false)
-
 // Form validation
 const validateForm = () => {
-  formErrors.value = { name: '', phone: '', password: '' }
+  formErrors.value = { nama_lengkap: '', password: '' }
 
-  if (!formData.value.name) {
-    formErrors.value.name = 'Nama harus diisi'
-  }
-
-  if (!formData.value.phone) {
-    formErrors.value.phone = 'Nomor telepon harus diisi'
+  if (!formData.value.nama_lengkap) {
+    formErrors.value.nama_lengkap = 'Nama lengkap harus diisi'
   }
 
   if (!formData.value.password) {
@@ -51,22 +41,6 @@ const handleSubmit = () => {
     error('Mohon perbaiki error pada form')
   }
 }
-
-const handleFileSelect = (file: File) => {
-  success(`File ${file.name} berhasil dipilih`)
-}
-
-const handleFileClear = () => {
-  success('File berhasil dihapus')
-}
-
-const handleFilterApply = (filters: any) => {
-  success('Filter berhasil diterapkan')
-}
-
-const handleFilterReset = () => {
-  success('Filter berhasil direset')
-}
 </script>
 
 <template>
@@ -81,20 +55,11 @@ const handleFilterReset = () => {
 
         <form @submit.prevent="handleSubmit" class="space-y-4">
           <FormInput
-            v-model="formData.name"
+            v-model="formData.nama_lengkap"
             label="Nama Lengkap"
             type="text"
             placeholder="Masukkan nama lengkap"
-            :error="formErrors.name"
-            required
-          />
-
-          <FormInput
-            v-model="formData.phone"
-            label="Nomor Telepon"
-            type="tel"
-            placeholder="081234567890"
-            :error="formErrors.phone"
+            :error="formErrors.nama_lengkap"
             required
           />
 
@@ -116,15 +81,16 @@ const handleFilterReset = () => {
         </form>
       </div>
 
-      <!-- File Upload Demo -->
+      <!-- File Upload Demo - Temporarily hidden (not working properly)
       <div class="bg-text-light rounded-lg p-6 shadow-sm">
         <h2 class="text-lg font-semibold text-text-dark mb-4">Upload Data</h2>
         <p class="text-sm text-text-dark mb-4">Upload file Excel untuk mengimpor data kandidat</p>
 
         <FileUpload @file-select="handleFileSelect" @file-clear="handleFileClear" />
       </div>
+      -->
 
-      <!-- Filter Demo -->
+      <!-- Filter Demo - Temporarily hidden (not working properly)
       <div class="bg-text-light rounded-lg p-6 shadow-sm">
         <h2 class="text-lg font-semibold text-text-dark mb-4">Filter Data</h2>
         <p class="text-sm text-text-dark mb-4">
@@ -138,14 +104,16 @@ const handleFilterReset = () => {
           Buka Filter
         </button>
       </div>
+      -->
     </div>
 
-    <!-- Filter Modal -->
+    <!-- Filter Modal - Temporarily hidden (not working properly)
     <FilterModal
       :is-open="showFilterModal"
       @close="showFilterModal = false"
       @apply="handleFilterApply"
       @reset="handleFilterReset"
     />
+    -->
   </div>
 </template>

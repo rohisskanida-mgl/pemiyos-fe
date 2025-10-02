@@ -84,6 +84,7 @@ export const useAuthStore = defineStore('auth', () => {
         user.value = userData
         return userData
       } catch (err) {
+        console.error("Error: ", err);
         localStorage.removeItem('user_data')
         return null
       }
@@ -135,10 +136,10 @@ export const useAuthStore = defineStore('auth', () => {
         error.value = 'Invalid response from server'
         return false
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Error handling is done in axios interceptor
       // Just set the error message here
-      error.value = err.response?.data?.error || 'Login failed'
+      error.value = (err as { response?: { data?: { error?: string } } }).response?.data?.error || 'Login failed'
       return false
     } finally {
       isLoading.value = false
@@ -162,6 +163,7 @@ export const useAuthStore = defineStore('auth', () => {
       removeUserData()
       sessionStorage.clear()
     } catch (err) {
+      console.error("Error: ", err);
       error.value = 'Terjadi kesalahan saat logout'
     } finally {
       isLoading.value = false
@@ -186,6 +188,7 @@ export const useAuthStore = defineStore('auth', () => {
 
       return true
     } catch (err) {
+      console.error("Error: ", err);
       error.value = 'Terjadi kesalahan saat memperbarui profil'
       return false
     } finally {
@@ -218,6 +221,7 @@ export const useAuthStore = defineStore('auth', () => {
           return false
         }
       } catch (err) {
+        console.error("Error: ", err);
         // Token is invalid, clear it
         removeToken()
         removeUserData()
@@ -241,6 +245,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
       return false
     } catch (err) {
+      console.error("Error: ", err);
       return false
     }
   }
