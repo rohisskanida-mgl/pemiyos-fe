@@ -10,6 +10,7 @@ import type { PaginationInfo } from '@/types/api.types'
 const apiClient: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'https://pemiyos-be-production-up.railway.app',
   timeout: Number(import.meta.env.VITE_API_TIMEOUT) || 30000,
+  withCredentials: true, // ← ADD THIS LINE!
   headers: {
     'Content-Type': 'application/json',
   },
