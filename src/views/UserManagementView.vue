@@ -102,7 +102,7 @@ const handleFilterReset = () => {
 <template>
   <div class="p-6">
     <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-col items-center justify-between mb-6">
       <div>
         <h1 class="text-2xl font-bold text-text-dark">Manajemen Pengguna</h1>
         <p class="text-text-dark mt-1">Kelola data pengguna sistem</p>
@@ -128,15 +128,15 @@ const handleFilterReset = () => {
           <Filter class="w-5 h-5 text-text-dark" />
         </button>
 
-        <!-- Add User Button -->
-        <button
-          @click="handleAddUser"
-          class="px-4 py-2 bg-success-accent text-white rounded-lg hover:brightness-95 transition-colors flex items-center gap-2"
-        >
-          <Plus class="w-4 h-4" />
-          Tambah Pengguna
-        </button>
       </div>
+      <!-- Add User Button -->
+      <button
+        @click="handleAddUser"
+        class="px-4 py-2 bg-success-accent text-white rounded-lg hover:brightness-95 transition-colors flex items-center gap-2"
+      >
+        <Plus class="w-4 h-4" />
+        Tambah Pengguna
+      </button>
     </div>
 
     <!-- Users Grid -->

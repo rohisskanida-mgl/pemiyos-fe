@@ -9,12 +9,12 @@ const { success, error } = useToast()
 const authStore = useAuthStore()
 
 const loginData = ref({
-  username: '',
+  nis: '',
   password: '',
 })
 
 const handleLogin = async () => {
-  if (!loginData.value.username || !loginData.value.password) {
+  if (!loginData.value.nis || !loginData.value.password) {
     error('Username dan password harus diisi')
     return
   }
@@ -24,12 +24,17 @@ const handleLogin = async () => {
 
     if (loginSuccess) {
       success('Login berhasil!')
-      router.push('/profile')
+      // Check user role and redirect accordingly
+      if (authStore.isAdmin) {
+        router.push('/home')
+      } else {
+        router.push('/profile')
+      }
     } else {
-      error(authStore.error || 'Login gagal. Periksa username dan password Anda.')
+      error(authStore.error || 'Login gagal. Periksa NIS dan password Anda.')
     }
   } catch {
-    error('Login gagal. Periksa username dan password Anda.')
+    error('Login gagal. Periksa NIS dan password Anda.')
   }
 }
 </script>
@@ -56,13 +61,13 @@ const handleLogin = async () => {
       <!-- Login Form -->
       <div class="space-y-4">
         <form @submit.prevent="handleLogin" class="space-y-4">
-          <!-- Username Field -->
+          <!-- NIS Field -->
           <div>
             <label class="block text-sm font-medium text-text-dark mb-2">Username</label>
             <input
-              v-model="loginData.username"
+              v-model="loginData.nis"
               type="text"
-              placeholder="Username"
+              placeholder="Masukkan Username"
               required
               class="w-full px-4 py-3 border border-divider rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-text-light"
             />

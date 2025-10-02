@@ -1,8 +1,18 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { votingService } from '@/services/api'
+import { useAuthStore } from './auth'
+import type { 
+  Position as ApiPosition, 
+  Candidate as ApiCandidate, 
+  Vote as ApiVote,
+  Election
+} from '@/types/api.types'
 
+// Transform API types to local types
 export interface Position {
-  id: number
+  id: string
+  positionId: number
   title: string
   description?: string
   candidatesCount: number
@@ -12,21 +22,21 @@ export interface Position {
 }
 
 export interface Candidate {
-  id: number
+  id: string
   name: string
   positionNumber: number
   positionId: number
   photos: string[]
-  profileHtml?: string
-  visionHtml?: string
-  missionHtml?: string
-  programHtml?: string
+  profile?: string
+  vision?: string
+  mission?: string
+  programKerja?: string
   isActive: boolean
 }
 
 export interface Vote {
   positionId: number
-  candidateId: number
+  candidateId: string
   votedAt: string
 }
 
@@ -38,131 +48,47 @@ export interface VotingStatus {
 }
 
 export const useVotingStore = defineStore('voting', () => {
+  const authStore = useAuthStore()
+  
   // State
-  const positions = ref<Position[]>([
-    {
-      id: 1,
-      title: 'Ketua & Wakil',
-      description: 'Pemimpin utama organisasi',
-      candidatesCount: 3,
-      isActive: true,
-      votingStartDate: '2024-01-01T00:00:00Z',
-      votingEndDate: '2024-12-31T23:59:59Z',
-    },
-    {
-      id: 2,
-      title: 'Sekretaris',
-      description: 'Penanggung jawab administrasi',
-      candidatesCount: 2,
-      isActive: true,
-      votingStartDate: '2024-01-01T00:00:00Z',
-      votingEndDate: '2024-12-31T23:59:59Z',
-    },
-    {
-      id: 3,
-      title: 'Bendahara',
-      description: 'Penanggung jawab keuangan',
-      candidatesCount: 2,
-      isActive: true,
-      votingStartDate: '2024-01-01T00:00:00Z',
-      votingEndDate: '2024-12-31T23:59:59Z',
-    },
-    {
-      id: 4,
-      title: 'Humas',
-      description: 'Penanggung jawab hubungan masyarakat',
-      candidatesCount: 1,
-      isActive: true,
-      votingStartDate: '2024-01-01T00:00:00Z',
-      votingEndDate: '2024-12-31T23:59:59Z',
-    },
-  ])
-
-  const candidates = ref<Candidate[]>([
-    {
-      id: 1,
-      name: 'John Doe',
-      positionNumber: 1,
-      positionId: 1,
-      photos: [
-        'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop&crop=face',
-        'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&h=300&fit=crop&crop=face',
-      ],
-      profileHtml: '<p>Mahasiswa Teknik Informatika angkatan 2021. Aktif dalam berbagai organisasi kampus dan memiliki pengalaman kepemimpinan yang baik.</p>',
-      visionHtml: '<p><strong>Visi:</strong> Menjadikan organisasi yang transparan, akuntabel, dan melayani seluruh anggota dengan sepenuh hati.</p>',
-      missionHtml: '<p><strong>Misi:</strong><br>1. Meningkatkan kualitas pelayanan kepada anggota<br>2. Mengembangkan program-program yang bermanfaat<br>3. Menjalin komunikasi yang baik dengan semua pihak</p>',
-      programHtml: '<p><strong>Program Kerja:</strong><br>• Digitalisasi sistem administrasi<br>• Program mentoring untuk anggota baru<br>• Kegiatan sosial dan pengabdian masyarakat<br>• Peningkatan fasilitas organisasi</p>',
-      isActive: true,
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      positionNumber: 2,
-      positionId: 1,
-      photos: [
-        'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=300&h=300&fit=crop&crop=face',
-        'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=300&h=300&fit=crop&crop=face',
-      ],
-      profileHtml: '<p>Mahasiswa Manajemen angkatan 2020. Berpengalaman dalam bidang administrasi dan organisasi.</p>',
-      visionHtml: '<p><strong>Visi:</strong> Membangun organisasi yang efisien dan berdaya saing tinggi.</p>',
-      missionHtml: '<p><strong>Misi:</strong><br>1. Mengoptimalkan sistem administrasi<br>2. Meningkatkan kinerja organisasi<br>3. Membangun jaringan yang luas</p>',
-      programHtml: '<p><strong>Program Kerja:</strong><br>• Sistem informasi terintegrasi<br>• Pelatihan soft skills<br>• Kerjasama dengan pihak eksternal<br>• Evaluasi kinerja berkala</p>',
-      isActive: true,
-    },
-    {
-      id: 3,
-      name: 'Mike Johnson',
-      positionNumber: 3,
-      positionId: 1,
-      photos: [
-        'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&h=300&fit=crop&crop=face',
-      ],
-      profileHtml: '<p>Mahasiswa Ekonomi angkatan 2021. Memiliki kemampuan komunikasi yang baik dan pengalaman dalam bidang keuangan.</p>',
-      visionHtml: '<p><strong>Visi:</strong> Menciptakan organisasi yang mandiri secara finansial dan transparan dalam pengelolaan keuangan.</p>',
-      missionHtml: '<p><strong>Misi:</strong><br>1. Mengelola keuangan dengan transparan<br>2. Mencari sumber pendanaan alternatif<br>3. Mengoptimalkan penggunaan anggaran</p>',
-      programHtml: '<p><strong>Program Kerja:</strong><br>• Sistem akuntansi digital<br>• Program fundraising<br>• Audit keuangan berkala<br>• Pelatihan manajemen keuangan</p>',
-      isActive: true,
-    },
-    {
-      id: 4,
-      name: 'Alice Brown',
-      positionNumber: 1,
-      positionId: 2,
-      photos: [
-        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=300&fit=crop&crop=face',
-      ],
-      profileHtml: '<p>Mahasiswa Administrasi angkatan 2020. Berpengalaman dalam bidang sekretariat dan dokumentasi.</p>',
-      visionHtml: '<p><strong>Visi:</strong> Menciptakan sistem administrasi yang efisien dan terorganisir dengan baik.</p>',
-      missionHtml: '<p><strong>Misi:</strong><br>1. Mengoptimalkan sistem dokumentasi<br>2. Meningkatkan efisiensi administrasi<br>3. Membangun sistem arsip digital</p>',
-      programHtml: '<p><strong>Program Kerja:</strong><br>• Digitalisasi dokumen<br>• Sistem arsip elektronik<br>• Pelatihan administrasi<br>• Standarisasi prosedur</p>',
-      isActive: true,
-    },
-    {
-      id: 5,
-      name: 'Bob Wilson',
-      positionNumber: 2,
-      positionId: 2,
-      photos: [
-        'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300&h=300&fit=crop&crop=face',
-      ],
-      profileHtml: '<p>Mahasiswa Komunikasi angkatan 2021. Memiliki kemampuan komunikasi yang baik dan pengalaman dalam bidang media.</p>',
-      visionHtml: '<p><strong>Visi:</strong> Membangun komunikasi yang efektif dan transparan dalam organisasi.</p>',
-      missionHtml: '<p><strong>Misi:</strong><br>1. Meningkatkan komunikasi internal<br>2. Mengembangkan media informasi<br>3. Membangun hubungan yang baik</p>',
-      programHtml: '<p><strong>Program Kerja:</strong><br>• Media sosial organisasi<br>• Newsletter berkala<br>• Pelatihan komunikasi<br>• Sistem informasi terpusat</p>',
-      isActive: true,
-    },
-  ])
-
+  const positions = ref<Position[]>([])
+  const candidates = ref<Candidate[]>([])
+  const currentElection = ref<Election | null>(null)
   const selectedVotes = ref<Map<number, Vote>>(new Map())
   const votingStatus = ref<VotingStatus>({
     hasVoted: false,
     canVote: true,
     votingPeriod: 'active',
-    remainingTime: '2 hari 5 jam',
+    remainingTime: undefined,
   })
-
+  
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+
+  // Helper functions to transform API data
+  const transformPosition = (apiPosition: ApiPosition): Position => ({
+    id: apiPosition._id,
+    positionId: apiPosition.position_id,
+    title: apiPosition.name,
+    description: apiPosition.description,
+    candidatesCount: 0, // Will be calculated
+    isActive: apiPosition.status === 'active',
+    votingStartDate: currentElection.value?.voting_start,
+    votingEndDate: currentElection.value?.voting_end,
+  })
+
+  const transformCandidate = (apiCandidate: ApiCandidate): Candidate => ({
+    id: apiCandidate._id,
+    name: apiCandidate.name,
+    positionNumber: apiCandidate.candidate_number,
+    positionId: apiCandidate.position_id,
+    photos: apiCandidate.image ? [apiCandidate.image] : [],
+    profile: apiCandidate.profile,
+    vision: apiCandidate.vision_mission?.vision,
+    mission: apiCandidate.vision_mission?.mission,
+    programKerja: apiCandidate.program_kerja,
+    isActive: apiCandidate.status === 'active',
+  })
 
   // Getters
   const activePositions = computed(() => 
@@ -202,49 +128,106 @@ export const useVotingStore = defineStore('voting', () => {
   )
 
   // Actions
-  const submitVote = async (positionId: number, candidateId: number): Promise<boolean> => {
+  const loadPositions = async (): Promise<void> => {
     isLoading.value = true
     error.value = null
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const response = await votingService.getPositions({ 
+        status: 'active',
+        limit: 'no_limit' 
+      })
+      
+      const transformedPositions = response.data.map(transformPosition)
+      
+      // Calculate candidates count for each position
+      for (const position of transformedPositions) {
+        const candidatesResponse = await votingService.getCandidatesByPosition(position.positionId, false)
+        position.candidatesCount = candidatesResponse.length
+      }
+      
+      positions.value = transformedPositions
+    } catch (err: any) {
+      error.value = err.message || 'Failed to load positions'
+      console.error('Error loading positions:', err)
+    } finally {
+      isLoading.value = false
+    }
+  }
 
-      // Validate position and candidate
-      const position = positions.value.find(p => p.id === positionId)
-      const candidate = candidates.value.find(c => c.id === candidateId && c.positionId === positionId)
+  const loadCandidates = async (positionId?: number): Promise<void> => {
+    isLoading.value = true
+    error.value = null
 
-      if (!position || !candidate) {
-        error.value = 'Posisi atau kandidat tidak valid'
+    try {
+      if (positionId) {
+        // Load candidates for specific position
+        const response = await votingService.getCandidatesByPosition(positionId, true)
+        const transformedCandidates = response.map(transformCandidate)
+        
+        // Update or add candidates for this position
+        candidates.value = [
+          ...candidates.value.filter(c => c.positionId !== positionId),
+          ...transformedCandidates
+        ]
+      } else {
+        // Load all candidates
+        const response = await votingService.getCandidates({
+          include_relations: true,
+          limit: 'no_limit'
+        })
+        candidates.value = response.data.map(transformCandidate)
+      }
+    } catch (err: any) {
+      error.value = err.message || 'Failed to load candidates'
+      console.error('Error loading candidates:', err)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const submitVote = async (positionId: number, candidateId: string): Promise<boolean> => {
+    isLoading.value = true
+    error.value = null
+
+    try {
+      if (!currentElection.value) {
+        error.value = 'No active election found'
         return false
       }
 
-      if (!position.isActive) {
-        error.value = 'Posisi ini tidak aktif untuk voting'
+      const authStore = useAuthStore()
+      const userId = authStore.user?.id
+
+      if (!userId) {
+        error.value = 'User not authenticated'
         return false
       }
 
-      if (!candidate.isActive) {
-        error.value = 'Kandidat ini tidak aktif'
-        return false
+      // Submit vote to API
+      const voteData = {
+        user_id: userId,
+        candidate_id: candidateId,
+        position_id: positionId,
+        period_start: currentElection.value.period_start,
+        period_end: currentElection.value.period_end,
       }
 
-      // Create vote record
+      await votingService.submitVote(voteData)
+
+      // Store the vote locally
       const vote: Vote = {
         positionId,
         candidateId,
         votedAt: new Date().toISOString(),
       }
 
-      // Store the vote
       selectedVotes.value.set(positionId, vote)
-
-      // Update voting status
       votingStatus.value.hasVoted = votedPositions.value.length > 0
 
       return true
-    } catch (err) {
-      error.value = 'Terjadi kesalahan saat submit vote'
+    } catch (err: any) {
+      error.value = err.response?.data?.error || 'Failed to submit vote'
       return false
     } finally {
       isLoading.value = false
@@ -252,26 +235,11 @@ export const useVotingStore = defineStore('voting', () => {
   }
 
   const removeVote = async (positionId: number): Promise<boolean> => {
-    isLoading.value = true
-    error.value = null
-
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      // Remove vote
-      selectedVotes.value.delete(positionId)
-
-      // Update voting status
-      votingStatus.value.hasVoted = votedPositions.value.length > 0
-
-      return true
-    } catch (err) {
-      error.value = 'Terjadi kesalahan saat menghapus vote'
-      return false
-    } finally {
-      isLoading.value = false
-    }
+    // Note: The backend doesn't support removing votes
+    // This is just for local state management
+    selectedVotes.value.delete(positionId)
+    votingStatus.value.hasVoted = votedPositions.value.length > 0
+    return true
   }
 
   const loadVotingData = async (): Promise<void> => {
@@ -279,29 +247,71 @@ export const useVotingStore = defineStore('voting', () => {
     error.value = null
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // Load current election
+      const election = await votingService.getCurrentElection()
+      currentElection.value = election
 
-      // In a real app, this would fetch data from API
-      // For now, we'll use the mock data already defined
-      
+      if (!election) {
+        votingStatus.value.canVote = false
+        votingStatus.value.votingPeriod = 'ended'
+        return
+      }
+
       // Check voting period
       const now = new Date()
-      const hasActiveVoting = positions.value.some(position => {
-        const startDate = position.votingStartDate ? new Date(position.votingStartDate) : null
-        const endDate = position.votingEndDate ? new Date(position.votingEndDate) : null
-        
-        if (startDate && endDate) {
-          return now >= startDate && now <= endDate
+      const startDate = election.voting_start ? new Date(election.voting_start) : null
+      const endDate = election.voting_end ? new Date(election.voting_end) : null
+
+      if (startDate && endDate) {
+        if (now < startDate) {
+          votingStatus.value.votingPeriod = 'upcoming'
+          votingStatus.value.canVote = false
+        } else if (now > endDate) {
+          votingStatus.value.votingPeriod = 'ended'
+          votingStatus.value.canVote = false
+        } else {
+          votingStatus.value.votingPeriod = 'active'
+          votingStatus.value.canVote = true
+          
+          // Calculate remaining time
+          const timeDiff = endDate.getTime() - now.getTime()
+          const days = Math.floor(timeDiff / (1000 * 60 * 60 * 24))
+          const hours = Math.floor((timeDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+          votingStatus.value.remainingTime = `${days} hari ${hours} jam`
         }
-        return true
-      })
+      }
 
-      votingStatus.value.canVote = hasActiveVoting
-      votingStatus.value.votingPeriod = hasActiveVoting ? 'active' : 'ended'
+      // Load positions and candidates
+      await Promise.all([
+        loadPositions(),
+        loadCandidates()
+      ])
 
-    } catch (err) {
-      error.value = 'Terjadi kesalahan saat memuat data voting'
+      // Check user's existing votes
+      const authStore = useAuthStore()
+      if (authStore.user?.id) {
+        const userVotes = await votingService.getUserVotes(authStore.user.id, {
+          period_start: election.period_start,
+          period_end: election.period_end,
+          limit: 'no_limit'
+        })
+
+        // Store existing votes
+        userVotes.data.forEach(vote => {
+          if (vote.position_id && vote.candidate_id) {
+            selectedVotes.value.set(vote.position_id, {
+              positionId: vote.position_id,
+              candidateId: vote.candidate_id,
+              votedAt: vote.created_at || new Date().toISOString()
+            })
+          }
+        })
+
+        votingStatus.value.hasVoted = selectedVotes.value.size > 0
+      }
+    } catch (err: any) {
+      error.value = err.message || 'Failed to load voting data'
+      console.error('Error loading voting data:', err)
     } finally {
       isLoading.value = false
     }
@@ -320,6 +330,7 @@ export const useVotingStore = defineStore('voting', () => {
     // State
     positions,
     candidates,
+    currentElection,
     selectedVotes,
     votingStatus,
     isLoading,
@@ -335,6 +346,8 @@ export const useVotingStore = defineStore('voting', () => {
     hasVotedForPosition,
     
     // Actions
+    loadPositions,
+    loadCandidates,
     submitVote,
     removeVote,
     loadVotingData,

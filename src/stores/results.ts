@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { resultsService, votingService, usersService } from '@/services/api'
+import type { VoteStatistics, NonVotersResponse, Position } from '@/types/api.types'
 
 export interface CandidateResult {
   candidateId: number
@@ -47,6 +49,7 @@ export const useResultsStore = defineStore('results', () => {
   const filters = ref<ResultsFilters>({})
   const isLoading = ref(false)
   const error = ref<string | null>(null)
+  const lastUpdated = ref<Date | null>(null)
   const isRealTimeEnabled = ref(false)
 
   // Real-time simulation
@@ -108,116 +111,66 @@ export const useResultsStore = defineStore('results', () => {
     error.value = null
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      // Mock results data
+      // Load positions first
+      const positionsResponse = await votingService.getPositions({ 
+        status: 'active',
+        limit: 'no_limit' 
+      })
+      
+      const positionResults: PositionResult[] = []
+      let totalVotesCount = 0
+      
+      // Load statistics for each position
+      for (const position of positionsResponse.data) {
+        const statistics = await resultsService.getPositionStatistics(position.position_id)
+        
+        const candidates: CandidateResult[] = statistics.data.map(candidate => ({
+          candidateId: 0, // API doesn't return candidate ID in statistics
+          candidateName: candidate.name,
+          positionNumber: candidate.candidate_number,
+          votes: candidate.voters,
+          percentage: statistics.total_votes > 0 
+            ? Math.round((candidate.voters / statistics.total_votes) * 1000) / 10 
+            : 0
+        }))
+        
+        // Find winner
+        const winner = candidates.length > 0 
+          ? candidates.reduce((prev, current) => 
+              current.votes > (prev?.votes || 0) ? current : prev, 
+              candidates[0]
+            )
+          : undefined
+        
+        positionResults.push({
+          positionId: position.position_id,
+          positionTitle: position.name,
+          totalVotes: statistics.total_votes,
+          candidates,
+          winner,
+          isComplete: true
+        })
+        
+        totalVotesCount += statistics.total_votes
+      }
+      
+      // Calculate overall participation
+      const usersCount = await usersService.getUsersCount({ role: 'voter' })
+      const totalVoters = usersCount.count || 1000
+      
       const mockResults: OverallResults = {
-        totalVoters: 1000,
-        totalVotes: 756,
-        participationRate: 75.6,
-        positions: [
-          {
-            positionId: 1,
-            positionTitle: 'Ketua & Wakil',
-            totalVotes: 756,
-            isComplete: true,
-            candidates: [
-              {
-                candidateId: 1,
-                candidateName: 'John Doe',
-                positionNumber: 1,
-                votes: 342,
-                percentage: 45.2,
-              },
-              {
-                candidateId: 2,
-                candidateName: 'Jane Smith',
-                positionNumber: 2,
-                votes: 248,
-                percentage: 32.8,
-              },
-              {
-                candidateId: 3,
-                candidateName: 'Mike Johnson',
-                positionNumber: 3,
-                votes: 166,
-                percentage: 22.0,
-              },
-            ],
-            winner: {
-              candidateId: 1,
-              candidateName: 'John Doe',
-              positionNumber: 1,
-              votes: 342,
-              percentage: 45.2,
-            },
-          },
-          {
-            positionId: 2,
-            positionTitle: 'Sekretaris',
-            totalVotes: 756,
-            isComplete: true,
-            candidates: [
-              {
-                candidateId: 4,
-                candidateName: 'Alice Brown',
-                positionNumber: 1,
-                votes: 442,
-                percentage: 58.5,
-              },
-              {
-                candidateId: 5,
-                candidateName: 'Bob Wilson',
-                positionNumber: 2,
-                votes: 314,
-                percentage: 41.5,
-              },
-            ],
-            winner: {
-              candidateId: 4,
-              candidateName: 'Alice Brown',
-              positionNumber: 1,
-              votes: 442,
-              percentage: 58.5,
-            },
-          },
-          {
-            positionId: 3,
-            positionTitle: 'Bendahara',
-            totalVotes: 756,
-            isComplete: true,
-            candidates: [
-              {
-                candidateId: 6,
-                candidateName: 'Carol Davis',
-                positionNumber: 1,
-                votes: 395,
-                percentage: 52.3,
-              },
-              {
-                candidateId: 7,
-                candidateName: 'David Miller',
-                positionNumber: 2,
-                votes: 361,
-                percentage: 47.7,
-              },
-            ],
-            winner: {
-              candidateId: 6,
-              candidateName: 'Carol Davis',
-              positionNumber: 1,
-              votes: 395,
-              percentage: 52.3,
-            },
-          },
-        ],
+        totalVoters,
+        totalVotes: totalVotesCount,
+        participationRate: totalVoters > 0 ? Math.round((totalVotesCount / totalVoters) * 1000) / 10 : 0,
+        positions: positionResults,
         lastUpdated: new Date().toISOString(),
       }
 
       results.value = mockResults
-    } catch (err) {
-      error.value = 'Terjadi kesalahan saat memuat hasil voting'
+      lastUpdated.value = new Date()
+    } catch (err: any) {
+      error.value = err.message || 'Failed to load voting results'
+      console.error('Error loading results:', err)
     } finally {
       isLoading.value = false
     }

@@ -5,9 +5,11 @@ import Navbar from './components/Navbar.vue'
 import Sidebar from './components/Sidebar.vue'
 import Toast from './components/Toast.vue'
 import { useToast } from './composables/useToast'
+import { useAuthStore } from './stores/auth'
 
 const router = useRouter()
 const route = useRoute()
+const authStore = useAuthStore()
 const sidebarOpen = ref(false)
 const currentPageTitle = ref('Dashboard')
 
@@ -60,10 +62,9 @@ const handleNavigation = (route: string) => {
   }
 }
 
-const handleLogout = () => {
-  // Handle logout logic here
-  console.log('Logout clicked')
-  // You can add actual logout logic like clearing tokens, redirecting to login, etc.
+const handleLogout = async () => {
+  await authStore.logout()
+  router.push('/login')
 }
 
 const { toasts, dismiss } = useToast()
@@ -88,8 +89,8 @@ const { toasts, dismiss } = useToast()
     <Navbar
       v-if="shouldShowNavbar"
       :page-title="currentPageTitle"
-      username="John Doe"
-      user-role="Admin"
+      :username="authStore.userInfo.fullName || authStore.userInfo.nis"
+      :user-role="authStore.userInfo.role === 'admin' ? 'Admin' : 'Voter'"
       @toggle-sidebar="toggleSidebar"
       @logout="handleLogout"
     />
@@ -98,8 +99,8 @@ const { toasts, dismiss } = useToast()
     <Sidebar
       v-if="shouldShowNavbar"
       :is-open="sidebarOpen"
-      username="John Doe"
-      user-role="Admin"
+      :username="authStore.userInfo.fullName || authStore.userInfo.nis"
+      :user-role="authStore.userInfo.role === 'admin' ? 'Admin' : 'Voter'"
       @close="closeSidebar"
       @navigate="handleNavigation"
     />

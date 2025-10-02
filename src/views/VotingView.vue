@@ -1,76 +1,80 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Users, AlertCircle, Check, Menu, User } from 'lucide-vue-next'
+import { Users, AlertCircle, Check, Loader2 } from 'lucide-vue-next'
+import { useVotingStore } from '@/stores/voting'
+import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
+const votingStore = useVotingStore()
+const { error: showError } = useToast()
 
-// Sample voting positions data matching the image
-const votingPositions = ref([
-  {
-    id: 1,
-    title: 'Ketua & Wakil',
-    candidatesCount: 3,
-    voted: false,
-  },
-  {
-    id: 2,
-    title: 'Sekretaris',
-    candidatesCount: 7,
-    voted: false,
-  },
-  {
-    id: 3,
-    title: 'Bendahara',
-    candidatesCount: 6,
-    voted: true,
-  },
-])
+// Computed properties for reactive data
+const votingPositions = computed(() => {
+  return votingStore.activePositions.map(position => ({
+    id: position.positionId,
+    title: position.title,
+    candidatesCount: position.candidatesCount,
+    voted: votingStore.hasVotedForPosition(position.positionId),
+  }))
+})
+
+const isLoading = computed(() => votingStore.isLoading)
+const hasError = computed(() => votingStore.error)
+
+// Load voting data on component mount
+onMounted(async () => {
+  try {
+    await votingStore.loadVotingData()
+  } catch (err) {
+    showError('Failed to load voting data')
+  }
+})
 
 const handlePositionSelect = (positionId: number) => {
   router.push(`/candidate-selection/${positionId}`)
+}
+
+const retryLoading = async () => {
+  votingStore.clearError()
+  try {
+    await votingStore.loadVotingData()
+  } catch (err) {
+    showError('Failed to load voting data')
+  }
 }
 </script>
 
 <template>
   <div class="min-h-screen bg-light-bg">
-    <!-- Mobile Header -->
-    <div class="bg-secondary px-4 py-3 flex items-center justify-between">
-      <!-- Left side - Time and signal icons -->
-      <div class="flex items-center space-x-2">
-        <span class="text-white text-sm font-medium">9:41</span>
-        <div class="flex space-x-1">
-          <!-- Signal bars -->
-          <div class="w-1 h-3 bg-white rounded-sm"></div>
-          <div class="w-1 h-3 bg-white rounded-sm"></div>
-          <div class="w-1 h-3 bg-white rounded-sm"></div>
-          <div class="w-1 h-3 bg-white rounded-sm"></div>
-        </div>
-        <!-- WiFi icon -->
-        <div class="w-4 h-3 border border-white rounded-sm">
-          <div class="w-2 h-1 bg-white rounded-sm mx-auto mt-1"></div>
-        </div>
-        <!-- Battery icon -->
-        <div class="w-6 h-3 border border-white rounded-sm relative">
-          <div class="w-4 h-2 bg-white rounded-sm absolute top-0.5 left-0.5"></div>
-          <div class="w-0.5 h-1 bg-white rounded-r-sm absolute -right-0.5 top-1"></div>
-        </div>
-      </div>
-
-      <!-- Center - Title -->
-      <h1 class="text-white text-lg font-bold">Pilihan Kandidat</h1>
-
-      <!-- Right side - Menu and profile -->
-      <div class="flex items-center space-x-3">
-        <Menu class="w-6 h-6 text-white" />
-        <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center">
-          <User class="w-5 h-5 text-secondary" />
-        </div>
-      </div>
-    </div>
-
     <!-- Content Area -->
     <div class="p-4 space-y-4">
+      <!-- Loading State -->
+      <div v-if="isLoading && votingPositions.length === 0" class="flex flex-col items-center justify-center py-12">
+        <Loader2 class="w-8 h-8 text-primary animate-spin mb-4" />
+        <p class="text-text-dark">Memuat data voting...</p>
+      </div>
+
+      <!-- Error State -->
+      <div v-else-if="hasError && votingPositions.length === 0" class="bg-white rounded-xl shadow-sm p-6 text-center">
+        <AlertCircle class="w-12 h-12 text-error mx-auto mb-4" />
+        <h3 class="text-lg font-semibold text-text-dark mb-2">Gagal Memuat Data</h3>
+        <p class="text-text-muted mb-4">{{ hasError }}</p>
+        <button 
+          @click="retryLoading"
+          class="px-4 py-2 bg-primary text-white rounded-lg hover:brightness-95 transition-all"
+        >
+          Coba Lagi
+        </button>
+      </div>
+
+      <!-- Empty State -->
+      <div v-else-if="!isLoading && votingPositions.length === 0" class="bg-white rounded-xl shadow-sm p-6 text-center">
+        <Users class="w-12 h-12 text-text-muted mx-auto mb-4" />
+        <h3 class="text-lg font-semibold text-text-dark mb-2">Tidak Ada Posisi Voting</h3>
+        <p class="text-text-muted">Belum ada posisi voting yang tersedia saat ini.</p>
+      </div>
+
       <!-- Position Cards -->
       <div
         v-for="position in votingPositions"
@@ -113,9 +117,5 @@ const handlePositionSelect = (positionId: number) => {
       </div>
     </div>
 
-    <!-- Home Indicator -->
-    <div class="flex justify-center py-2">
-      <div class="w-32 h-1 bg-text-dark rounded-full"></div>
-    </div>
   </div>
 </template>
