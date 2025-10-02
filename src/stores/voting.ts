@@ -26,7 +26,7 @@ export interface Candidate {
   name: string
   positionNumber: number
   positionId: number
-  photos: string[]
+  image: string[]
   profile?: string
   vision?: string
   mission?: string
@@ -66,29 +66,33 @@ export const useVotingStore = defineStore('voting', () => {
   const error = ref<string | null>(null)
 
   // Helper functions to transform API data
-  const transformPosition = (apiPosition: ApiPosition): Position => ({
-    id: apiPosition._id,
-    positionId: apiPosition.position_id,
-    title: apiPosition.name,
-    description: apiPosition.description,
-    candidatesCount: 0, // Will be calculated
-    isActive: apiPosition.status === 'active',
-    votingStartDate: currentElection.value?.voting_start,
-    votingEndDate: currentElection.value?.voting_end,
-  })
+  const transformPosition = (apiPosition: any): Position => {
+    return {
+      id: apiPosition.id || apiPosition._id,
+      positionId: apiPosition.positionId || apiPosition.position_id,
+      title: apiPosition.title || apiPosition.name,
+      description: apiPosition.description,
+      candidatesCount: apiPosition.candidatesCount || 0,
+      isActive: apiPosition.isActive !== undefined ? apiPosition.isActive : (apiPosition.status === 'active'),
+      votingStartDate: apiPosition.votingStartDate,
+      votingEndDate: apiPosition.votingEndDate,
+    }
+  }
 
-  const transformCandidate = (apiCandidate: ApiCandidate): Candidate => ({
-    id: apiCandidate._id,
-    name: apiCandidate.name,
-    positionNumber: apiCandidate.candidate_number,
-    positionId: apiCandidate.position_id,
-    photos: apiCandidate.image ? [apiCandidate.image] : [],
-    profile: apiCandidate.profile,
-    vision: apiCandidate.vision_mission?.vision,
-    mission: apiCandidate.vision_mission?.mission,
-    programKerja: apiCandidate.program_kerja,
-    isActive: apiCandidate.status === 'active',
-  })
+  const transformCandidate = (apiCandidate: ApiCandidate): Candidate => {
+    return {
+      id: apiCandidate._id,
+      name: apiCandidate.name,
+      positionNumber: apiCandidate.candidate_number,
+      positionId: apiCandidate.position_id,
+      image: apiCandidate.image ? [apiCandidate.image] : [],
+      profile: apiCandidate.profile,
+      vision: apiCandidate.vision_mission?.vision,
+      mission: apiCandidate.vision_mission?.mission,
+      programKerja: apiCandidate.program_kerja,
+      isActive: apiCandidate.status === 'active',
+    }
+  }
 
   // Getters
   const activePositions = computed(() => 
@@ -118,6 +122,21 @@ export const useVotingStore = defineStore('voting', () => {
       candidate.positionId === positionId && candidate.isActive
     )
   )
+
+  // Group candidates by position for easier access
+  const candidatesByPosition = computed(() => {
+    const grouped: Record<number, any[]> = {}
+    candidates.value.forEach(candidate => {
+      if (!grouped[candidate.positionId]) {
+        grouped[candidate.positionId] = []
+      }
+      const group = grouped[candidate.positionId]
+      if (group) {
+        group.push(candidate)
+      }
+    })
+    return grouped
+  })
 
   const getVoteForPosition = computed(() => (positionId: number) => 
     selectedVotes.value.get(positionId)
@@ -317,6 +336,26 @@ export const useVotingStore = defineStore('voting', () => {
     }
   }
 
+  const getUserVotes = async (): Promise<any[]> => {
+    try {
+      const authStore = useAuthStore()
+      if (!authStore.user?.id || !currentElection.value) {
+        return []
+      }
+
+      const response = await votingService.getUserVotes(authStore.user.id, {
+        period_start: currentElection.value.period_start,
+        period_end: currentElection.value.period_end,
+        limit: 'no_limit'
+      })
+
+      return response.data
+    } catch (err) {
+      console.error('Error getting user votes:', err)
+      return []
+    }
+  }
+
   const clearError = () => {
     error.value = null
   }
@@ -342,6 +381,7 @@ export const useVotingStore = defineStore('voting', () => {
     votingProgress,
     isVotingComplete,
     getCandidatesByPosition,
+    candidatesByPosition,
     getVoteForPosition,
     hasVotedForPosition,
     
@@ -351,6 +391,7 @@ export const useVotingStore = defineStore('voting', () => {
     submitVote,
     removeVote,
     loadVotingData,
+    getUserVotes,
     clearError,
     resetVotes,
   }

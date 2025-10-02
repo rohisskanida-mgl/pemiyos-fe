@@ -10,14 +10,12 @@ const { success, error } = useToast()
 // Form data
 const formData = ref({
   name: '',
-  email: '',
   phone: '',
   password: '',
 })
 
 const formErrors = ref({
   name: '',
-  email: '',
   phone: '',
   password: '',
 })
@@ -26,16 +24,10 @@ const showFilterModal = ref(false)
 
 // Form validation
 const validateForm = () => {
-  formErrors.value = { name: '', email: '', phone: '', password: '' }
+  formErrors.value = { name: '', phone: '', password: '' }
 
   if (!formData.value.name) {
     formErrors.value.name = 'Nama harus diisi'
-  }
-
-  if (!formData.value.email) {
-    formErrors.value.email = 'Email harus diisi'
-  } else if (!/\S+@\S+\.\S+/.test(formData.value.email)) {
-    formErrors.value.email = 'Format email tidak valid'
   }
 
   if (!formData.value.phone) {
@@ -70,7 +62,6 @@ const handleFileClear = () => {
 
 const handleFilterApply = (filters: any) => {
   success('Filter berhasil diterapkan')
-  console.log('Applied filters:', filters)
 }
 
 const handleFilterReset = () => {
@@ -95,15 +86,6 @@ const handleFilterReset = () => {
             type="text"
             placeholder="Masukkan nama lengkap"
             :error="formErrors.name"
-            required
-          />
-
-          <FormInput
-            v-model="formData.email"
-            label="Email"
-            type="email"
-            placeholder="contoh@email.com"
-            :error="formErrors.email"
             required
           />
 

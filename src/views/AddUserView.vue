@@ -1,59 +1,68 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowLeft, Download } from 'lucide-vue-next'
+import { ArrowLeft, Download, Loader2 } from 'lucide-vue-next'
 import FormInput from '@/components/FormInput.vue'
 import FileUpload from '@/components/FileUpload.vue'
 import { useToast } from '@/composables/useToast'
+import { usersService } from '@/services/api'
+import type { User } from '@/types/api.types'
 
 const router = useRouter()
-const { success, error } = useToast()
+const { success, error: showError } = useToast()
 
 const activeTab = ref<'form' | 'excel'>('form')
 const isLoading = ref(false)
 
 // Form data
 const formData = ref({
-  username: '',
+  nis: '',
   password: '',
-  fullName: '',
-  email: '',
-  phone: '',
-  division: '',
-  position: '',
+  nama_lengkap: '',
+  class: '',
+  gender: 'L' as 'L' | 'P',
+  role: 'voter' as 'voter' | 'admin',
+  status: 'active' as 'active' | 'inactive',
 })
 
 const formErrors = ref({
-  username: '',
+  nis: '',
   password: '',
-  fullName: '',
-  email: '',
-  phone: '',
-  division: '',
-  position: '',
+  nama_lengkap: '',
+  class: '',
 })
 
-// Division and position options
-const divisions = ['IT', 'Marketing', 'Finance', 'HR', 'Operations', 'Research']
+const classOptions = [
+  'X PPLG 1', 'X PPLG 2', 'X PPLG 3',
+  'X PM 1', 'X PM 2',
+  'X MPLB 1', 'X MPLB 2', 'X MPLB 3',
+  'X AKL 1', 'X AKL 2', 'X AKL 3',
 
-const positions = ['Ketua', 'Wakil Ketua', 'Sekretaris', 'Bendahara', 'Anggota']
+  'XI PPLG 1', 'XI PPLG 2', 'XI PPLG 3',
+  'XI PM 1', 'XI PM 2',
+  'XI MPLB 1', 'XI MPLB 2', 'XI MPLB 3',
+  'XI AKL 1', 'XI AKL 2', 'XI AKL 3',
+
+  'XII PPLG 1', 'XII PPLG 2', 'XII PPLG 3',
+  'XII PM 1', 'XII PM 2',
+  'XII MPLB 1', 'XII MPLB 2', 'XII MPLB 3',
+  'XII AKL 1', 'XII AKL 2', 'XII AKL 3',
+];
+
 
 // Form validation
 const validateForm = () => {
   formErrors.value = {
-    username: '',
+    nis: '',
     password: '',
-    fullName: '',
-    email: '',
-    phone: '',
-    division: '',
-    position: '',
+    nama_lengkap: '',
+    class: '',
   }
 
   let isValid = true
 
-  if (!formData.value.username) {
-    formErrors.value.username = 'Username harus diisi'
+  if (!formData.value.nis) {
+    formErrors.value.nis = 'NIS harus diisi'
     isValid = false
   }
 
@@ -65,31 +74,8 @@ const validateForm = () => {
     isValid = false
   }
 
-  if (!formData.value.fullName) {
-    formErrors.value.fullName = 'Nama lengkap harus diisi'
-    isValid = false
-  }
-
-  if (!formData.value.email) {
-    formErrors.value.email = 'Email harus diisi'
-    isValid = false
-  } else if (!/\S+@\S+\.\S+/.test(formData.value.email)) {
-    formErrors.value.email = 'Format email tidak valid'
-    isValid = false
-  }
-
-  if (!formData.value.phone) {
-    formErrors.value.phone = 'Nomor telepon harus diisi'
-    isValid = false
-  }
-
-  if (!formData.value.division) {
-    formErrors.value.division = 'Divisi harus dipilih'
-    isValid = false
-  }
-
-  if (!formData.value.position) {
-    formErrors.value.position = 'Jabatan harus dipilih'
+  if (!formData.value.nama_lengkap) {
+    formErrors.value.nama_lengkap = 'Nama lengkap harus diisi'
     isValid = false
   }
 
@@ -98,28 +84,45 @@ const validateForm = () => {
 
 const handleSubmit = async () => {
   if (!validateForm()) {
-    error('Mohon perbaiki error pada form')
+    showError('Mohon perbaiki error pada form')
     return
   }
 
   isLoading.value = true
 
   try {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    const newUser: Omit<User, '_id' | 'created_at' | 'updated_at'> = {
+      nis: formData.value.nis,
+      password: formData.value.password,
+      nama_lengkap: formData.value.nama_lengkap,
+      role: formData.value.role,
+      class: formData.value.class || null,
+      gender: formData.value.gender,
+      status: formData.value.status,
+    }
 
+    await usersService.createUser(newUser)
     success('Pengguna berhasil ditambahkan!')
-    router.push('/user-management')
-  } catch (err) {
-    error('Gagal menambahkan pengguna')
+    router.push('/users')
+  } catch (err: any) {
+    showError(err.response?.data?.error || 'Gagal menambahkan pengguna')
   } finally {
     isLoading.value = false
   }
 }
 
-const handleFileSelect = (file: File) => {
-  success(`File ${file.name} berhasil dipilih`)
-  // Handle Excel file processing here
+const handleFileUpload = async (file: File) => {
+  isLoading.value = true
+
+  try {
+    // Parse Excel file and bulk create users
+    // This would require a library like xlsx to parse the file
+    showError('Bulk upload belum diimplementasikan')
+  } catch (err: any) {
+    showError('Gagal memproses file')
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const handleFileClear = () => {
@@ -127,15 +130,22 @@ const handleFileClear = () => {
 }
 
 const downloadTemplate = () => {
-  success('Template Excel berhasil didownload')
-  // Handle template download here
+  // Create and download Excel template
+  const templateData = 'NIS,Password,Nama Lengkap,Kelas,Jenis Kelamin (L/P),Role (voter/admin)\n'
+  const blob = new Blob([templateData], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'template_users.csv'
+  a.click()
+  URL.revokeObjectURL(url)
+  success('Template berhasil didownload!')
 }
 
 const goBack = () => {
-  router.push('/user-management')
+  router.push('/users')
 }
 </script>
-
 <template>
   <div class="p-6">
     <!-- Header -->
@@ -186,11 +196,11 @@ const goBack = () => {
           <form @submit.prevent="handleSubmit" class="space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormInput
-                v-model="formData.username"
-                label="Username"
+                v-model="formData.nis"
+                label="NIS"
                 type="text"
-                placeholder="Masukkan username"
-                :error="formErrors.username"
+                placeholder="Masukkan NIS"
+                :error="formErrors.nis"
                 required
               />
 
@@ -205,72 +215,86 @@ const goBack = () => {
             </div>
 
             <FormInput
-              v-model="formData.fullName"
+              v-model="formData.nama_lengkap"
               label="Nama Lengkap"
               type="text"
               placeholder="Masukkan nama lengkap"
-              :error="formErrors.fullName"
+              :error="formErrors.nama_lengkap"
               required
             />
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput
-                v-model="formData.email"
-                label="Email"
-                type="email"
-                placeholder="contoh@email.com"
-                :error="formErrors.email"
-                required
-              />
+              <div class="space-y-2">
+                <label class="block text-sm font-medium text-text-dark">
+                  Kelas
+                </label>
+                <select
+                  v-model="formData.class"
+                  class="w-full px-4 py-3 rounded-lg border border-divider focus:outline-none focus:ring-2 focus:ring-info-accent/20 focus:border-info-accent"
+                  :class="{ 'border-error-accent': formErrors.class }"
+                >
+                  <option value="">Pilih Kelas (Opsional)</option>
+                  <option v-for="cls in classOptions" :key="cls" :value="cls">
+                    {{ cls }}
+                  </option>
+                </select>
+                <div v-if="formErrors.class" class="text-sm text-error-accent">
+                  {{ formErrors.class }}
+                </div>
+              </div>
 
-              <FormInput
-                v-model="formData.phone"
-                label="No HP"
-                type="tel"
-                placeholder="081234567890"
-                :error="formErrors.phone"
-                required
-              />
+              <div class="space-y-2">
+                <label class="block text-sm font-medium text-text-dark">
+                  Jenis Kelamin <span class="text-error-accent">*</span>
+                </label>
+                <select
+                  v-model="formData.gender"
+                  class="w-full px-4 py-3 rounded-lg border border-divider focus:outline-none focus:ring-2 focus:ring-info-accent/20 focus:border-info-accent"
+                >
+                  <option value="L">Laki-laki</option>
+                  <option value="P">Perempuan</option>
+                </select>
+              </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div class="space-y-2">
                 <label class="block text-sm font-medium text-text-dark">
-                  Divisi <span class="text-error-accent">*</span>
+                  Role <span class="text-error-accent">*</span>
                 </label>
                 <select
-                  v-model="formData.division"
+                  v-model="formData.role"
                   class="w-full px-4 py-3 rounded-lg border border-divider focus:outline-none focus:ring-2 focus:ring-info-accent/20 focus:border-info-accent"
-                  :class="{ 'border-error-accent': formErrors.division }"
                 >
-                  <option value="">Pilih Divisi</option>
-                  <option v-for="division in divisions" :key="division" :value="division">
-                    {{ division }}
-                  </option>
+                  <option value="voter">Voter</option>
+                  <option value="admin">Admin</option>
                 </select>
-                <div v-if="formErrors.division" class="text-sm text-error-accent">
-                  {{ formErrors.division }}
-                </div>
               </div>
 
               <div class="space-y-2">
                 <label class="block text-sm font-medium text-text-dark">
-                  Jabatan <span class="text-error-accent">*</span>
+                  Status <span class="text-error-accent">*</span>
                 </label>
                 <select
-                  v-model="formData.position"
+                  v-model="formData.status"
                   class="w-full px-4 py-3 rounded-lg border border-divider focus:outline-none focus:ring-2 focus:ring-info-accent/20 focus:border-info-accent"
-                  :class="{ 'border-error-accent': formErrors.position }"
                 >
-                  <option value="">Pilih Jabatan</option>
-                  <option v-for="position in positions" :key="position" :value="position">
-                    {{ position }}
-                  </option>
+                  <option value="active">Aktif</option>
+                  <option value="inactive">Tidak Aktif</option>
                 </select>
-                <div v-if="formErrors.position" class="text-sm text-error-accent">
-                  {{ formErrors.position }}
-                </div>
               </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="flex justify-end mt-6">
+              <button
+                type="submit"
+                :disabled="isLoading"
+                class="px-6 py-3 bg-success-accent text-white rounded-lg hover:brightness-95 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <Loader2 v-if="isLoading" class="w-4 h-4 animate-spin" />
+                <span>{{ isLoading ? 'Menyimpan...' : 'Simpan Pengguna' }}</span>
+              </button>
             </div>
           </form>
         </div>
@@ -290,15 +314,15 @@ const goBack = () => {
             </button>
           </div>
 
-          <FileUpload @file-select="handleFileSelect" @file-clear="handleFileClear" />
+          <FileUpload @file-select="handleFileUpload" @file-clear="handleFileClear" />
         </div>
       </div>
     </div>
 
-    <!-- Submit Button -->
-    <div class="flex justify-end">
+    <!-- Submit Button for Excel Tab -->
+    <div v-if="activeTab === 'excel'" class="flex justify-end">
       <button
-        @click="handleSubmit"
+        @click="handleFileUpload"
         :disabled="isLoading"
         class="px-6 py-3 bg-info-accent text-text-light rounded-lg font-medium hover:brightness-95 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >

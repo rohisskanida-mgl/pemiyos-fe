@@ -1,96 +1,95 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Plus, Filter, Edit, Trash2, User } from 'lucide-vue-next'
+import { Plus, Filter, Edit, Trash2, User, Loader2, Search } from 'lucide-vue-next'
 import FilterModal from '@/components/FilterModal.vue'
 import { useToast } from '@/composables/useToast'
+import { usersService } from '@/services/api'
+import type { User as ApiUser, PaginationInfo } from '@/types/api.types'
 
 const router = useRouter()
-const { success, error } = useToast()
+const { success, error: showError } = useToast()
 
 const showFilterModal = ref(false)
 const searchQuery = ref('')
+const isLoading = ref(false)
+const isDeleting = ref<string | null>(null)
 
-// Sample users data
-const users = ref([
-  {
-    id: 1,
-    username: 'john.doe',
-    fullName: 'John Doe',
-    email: 'john.doe@example.com',
-    role: 'Admin',
-    year: '2024/2025',
-    division: 'IT',
-    position: 'Ketua',
-    status: 'active',
-  },
-  {
-    id: 2,
-    username: 'jane.smith',
-    fullName: 'Jane Smith',
-    email: 'jane.smith@example.com',
-    role: 'User',
-    year: '2024/2025',
-    division: 'Marketing',
-    position: 'Anggota',
-    status: 'active',
-  },
-  {
-    id: 3,
-    username: 'mike.johnson',
-    fullName: 'Mike Johnson',
-    email: 'mike.johnson@example.com',
-    role: 'User',
-    year: '2023/2024',
-    division: 'Finance',
-    position: 'Bendahara',
-    status: 'inactive',
-  },
-  {
-    id: 4,
-    username: 'alice.brown',
-    fullName: 'Alice Brown',
-    email: 'alice.brown@example.com',
-    role: 'User',
-    year: '2024/2025',
-    division: 'HR',
-    position: 'Sekretaris',
-    status: 'active',
-  },
-])
+// Pagination
+const currentPage = ref(1)
+const pagination = ref<PaginationInfo | null>(null)
 
-const filteredUsers = computed(() => {
-  if (!searchQuery.value) return users.value
+// Users data from API
+const users = ref<ApiUser[]>([])
 
-  return users.value.filter(
-    (user) =>
-      user.username.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      user.fullName.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.value.toLowerCase()),
-  )
+// Debounce timer for search
+let searchTimer: NodeJS.Timeout | null = null
+
+// Load users from API
+const loadUsers = async (page = 1, search = '') => {
+  isLoading.value = true
+  try {
+    const response = await usersService.getUsers({
+      page,
+      limit: 10,
+      search: search || undefined,
+    })
+    
+    users.value = response.data
+    pagination.value = response.pagination || null
+    currentPage.value = page
+  } catch (err: any) {
+    showError(err.message || 'Failed to load users')
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// Handle search with debounce
+const handleSearch = () => {
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+  }
+  
+  searchTimer = setTimeout(() => {
+    loadUsers(1, searchQuery.value)
+  }, 500)
+}
+
+// Load users on mount
+onMounted(() => {
+  loadUsers()
 })
 
 const handleAddUser = () => {
   router.push('/add-user')
 }
 
-const handleEditUser = (userId: number) => {
-  success(`Edit user ${userId} - Fitur akan segera tersedia`)
+const handleEditUser = (userId: string) => {
+  router.push(`/edit-user/${userId}`)
 }
 
-const handleDeleteUser = (userId: number, username: string) => {
+const handlePageChange = (page: number) => {
+  loadUsers(page, searchQuery.value)
+}
+
+const handleDeleteUser = async (userId: string, username: string) => {
   if (confirm(`Apakah Anda yakin ingin menghapus user ${username}?`)) {
-    const index = users.value.findIndex((user) => user.id === userId)
-    if (index > -1) {
-      users.value.splice(index, 1)
+    isDeleting.value = userId
+    try {
+      await usersService.deleteUser(userId)
       success(`User ${username} berhasil dihapus`)
+      // Reload users
+      await loadUsers(currentPage.value, searchQuery.value)
+    } catch (err: any) {
+      showError(err.message || 'Failed to delete user')
+    } finally {
+      isDeleting.value = null
     }
   }
 }
 
 const handleFilterApply = (filters: any) => {
-  console.log('Applied filters:', filters)
-  success('Filter berhasil diterapkan')
   showFilterModal.value = false
 }
 
@@ -113,6 +112,7 @@ const handleFilterReset = () => {
         <div class="relative">
           <input
             v-model="searchQuery"
+            @input="handleSearch"
             type="text"
             placeholder="Cari pengguna..."
             class="pl-10 pr-4 py-2 border border-divider rounded-lg focus:outline-none focus:ring-2 focus:ring-info-accent/20 focus:border-info-accent"
@@ -139,50 +139,65 @@ const handleFilterReset = () => {
       </button>
     </div>
 
+    <!-- Loading State -->
+    <div v-if="isLoading && users.length === 0" class="text-center py-12">
+      <Loader2 class="w-8 h-8 text-primary animate-spin mx-auto mb-4" />
+      <p class="text-text-dark">Memuat data pengguna...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div v-else-if="!isLoading && users.length === 0" class="text-center py-12 bg-text-light rounded-xl">
+      <User class="w-12 h-12 text-text-muted mx-auto mb-4" />
+      <h3 class="text-lg font-semibold text-text-dark mb-2">Tidak Ada Pengguna</h3>
+      <p class="text-text-muted mb-4">Belum ada pengguna yang terdaftar</p>
+      <button
+        @click="handleAddUser"
+        class="px-4 py-2 bg-primary text-white rounded-lg hover:brightness-95 transition-colors"
+      >
+        Tambah Pengguna Pertama
+      </button>
+    </div>
+
     <!-- Users Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <div
-        v-for="user in filteredUsers"
-        :key="user.id"
+        v-for="user in users"
+        :key="user._id"
         class="bg-text-light rounded-xl shadow-sm p-4 border border-transparent hover:border-divider transition-colors"
       >
         <!-- User Info -->
         <div class="flex items-start gap-3 mb-4">
           <div class="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-            <span class="text-white font-bold">{{ user.fullName.charAt(0) }}</span>
+            <span class="text-white font-bold">{{ user.nama_lengkap.charAt(0) }}</span>
           </div>
           <div class="flex-1">
-            <h3 class="font-semibold text-text-dark">{{ user.fullName }}</h3>
-            <p class="text-sm text-text-dark">@{{ user.username }}</p>
+            <h3 class="font-semibold text-text-dark">{{ user.nama_lengkap }}</h3>
+            <p class="text-sm text-text-dark">NIS: {{ user.nis }}</p>
             <div class="flex items-center gap-2 mt-1">
               <span
                 :class="[
                   'text-xs px-2 py-1 rounded-full',
-                  user.role === 'Admin'
+                  user.role === 'admin'
                     ? 'bg-info-accent text-text-light'
                     : 'bg-light-bg text-text-dark',
                 ]"
               >
-                {{ user.role }}
+                {{ user.role === 'admin' ? 'Admin' : 'Voter' }}
               </span>
-              <span class="text-xs text-text-dark">{{ user.year }}</span>
+              <span class="text-xs text-text-dark" v-if="user.class">{{ user.class }}</span>
             </div>
           </div>
         </div>
 
         <!-- User Details -->
         <div class="space-y-2 mb-4">
-          <div class="text-sm">
-            <span class="text-text-dark">Email:</span>
-            <span class="text-text-dark ml-1">{{ user.email }}</span>
+          <div class="text-sm" v-if="user.class">
+            <span class="text-text-dark">Kelas:</span>
+            <span class="text-text-dark ml-1">{{ user.class }}</span>
           </div>
           <div class="text-sm">
-            <span class="text-text-dark">Divisi:</span>
-            <span class="text-text-dark ml-1">{{ user.division }}</span>
-          </div>
-          <div class="text-sm">
-            <span class="text-text-dark">Jabatan:</span>
-            <span class="text-text-dark ml-1">{{ user.position }}</span>
+            <span class="text-text-dark">Jenis Kelamin:</span>
+            <span class="text-text-dark ml-1">{{ user.gender === 'L' ? 'Laki-laki' : 'Perempuan' }}</span>
           </div>
           <div class="text-sm">
             <span class="text-text-dark">Status:</span>
@@ -202,15 +217,16 @@ const handleFilterReset = () => {
         <!-- Action Buttons -->
         <div class="flex gap-2">
           <button
-            @click="handleEditUser(user.id)"
+            @click="handleEditUser(user._id)"
             class="flex-1 px-3 py-2 bg-warn-accent text-white rounded-lg hover:brightness-95 transition-colors flex items-center justify-center gap-1"
           >
             <Edit class="w-4 h-4" />
             Edit
           </button>
           <button
-            @click="handleDeleteUser(user.id, user.username)"
-            class="flex-1 px-3 py-2 bg-error-accent text-white rounded-lg hover:brightness-95 transition-colors flex items-center justify-center gap-1"
+            @click="handleDeleteUser(user._id, user.nama_lengkap)"
+            :disabled="isDeleting === user._id"
+            class="flex-1 px-3 py-2 bg-error-accent text-white rounded-lg hover:brightness-95 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
           >
             <Trash2 class="w-4 h-4" />
             Hapus
@@ -219,11 +235,41 @@ const handleFilterReset = () => {
       </div>
     </div>
 
-    <!-- Empty State -->
-    <div v-if="filteredUsers.length === 0" class="text-center py-12">
-      <User class="w-16 h-16 text-text-dark mx-auto mb-4" />
-      <h3 class="text-lg font-semibold text-text-dark mb-2">Tidak ada pengguna ditemukan</h3>
-      <p class="text-text-dark">Coba ubah kata kunci pencarian atau filter</p>
+    <!-- Pagination -->
+    <div v-if="pagination && pagination.total_pages > 1" class="flex justify-center mt-6">
+      <div class="flex items-center gap-2">
+        <button
+          @click="handlePageChange(currentPage - 1)"
+          :disabled="currentPage === 1"
+          class="px-3 py-1 rounded-lg border border-divider hover:bg-light-bg disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Previous
+        </button>
+        
+        <div class="flex gap-1">
+          <button
+            v-for="page in Math.min(5, pagination.total_pages)"
+            :key="page"
+            @click="handlePageChange(page)"
+            :class="[
+              'px-3 py-1 rounded-lg',
+              page === currentPage
+                ? 'bg-primary text-white'
+                : 'border border-divider hover:bg-light-bg'
+            ]"
+          >
+            {{ page }}
+          </button>
+        </div>
+        
+        <button
+          @click="handlePageChange(currentPage + 1)"
+          :disabled="currentPage === pagination.total_pages"
+          class="px-3 py-1 rounded-lg border border-divider hover:bg-light-bg disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Next
+        </button>
+      </div>
     </div>
 
     <!-- Filter Modal -->

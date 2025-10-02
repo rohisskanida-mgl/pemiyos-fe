@@ -3,7 +3,7 @@ interface Candidate {
   id: number
   name: string
   positionNumber: number
-  photos: string[]
+  image: string[]
   profileHtml?: string
   visionHtml?: string
   missionHtml?: string
@@ -25,8 +25,8 @@ defineProps<Props>()
   >
     <div class="relative overflow-hidden rounded-lg bg-primary">
       <img
-        v-if="candidate.photos?.[0]"
-        :src="candidate.photos[0]"
+        v-if="candidate.image?.[0]"
+        :src="candidate.image[0]"
         alt="Candidate photo"
         class="w-full h-64 object-cover"
       />

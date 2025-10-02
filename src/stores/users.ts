@@ -5,7 +5,6 @@ export interface User {
   id: number
   username: string
   fullName: string
-  email: string
   phone: string
   role: 'Admin' | 'User'
   year: string
@@ -21,7 +20,6 @@ export interface CreateUserData {
   username: string
   password: string
   fullName: string
-  email: string
   phone: string
   division: string
   position: string
@@ -30,7 +28,6 @@ export interface CreateUserData {
 
 export interface UpdateUserData {
   fullName?: string
-  email?: string
   phone?: string
   division?: string
   position?: string
@@ -60,7 +57,6 @@ export const useUserStore = defineStore('users', () => {
       id: 1,
       username: 'admin',
       fullName: 'Admin User',
-      email: 'admin@example.com',
       phone: '081234567890',
       role: 'Admin',
       year: '2024/2025',
@@ -74,7 +70,6 @@ export const useUserStore = defineStore('users', () => {
       id: 2,
       username: 'john.doe',
       fullName: 'John Doe',
-      email: 'john.doe@example.com',
       phone: '081234567891',
       role: 'User',
       year: '2024/2025',
@@ -88,7 +83,6 @@ export const useUserStore = defineStore('users', () => {
       id: 3,
       username: 'jane.smith',
       fullName: 'Jane Smith',
-      email: 'jane.smith@example.com',
       phone: '081234567892',
       role: 'User',
       year: '2024/2025',
@@ -102,7 +96,6 @@ export const useUserStore = defineStore('users', () => {
       id: 4,
       username: 'mike.johnson',
       fullName: 'Mike Johnson',
-      email: 'mike.johnson@example.com',
       phone: '081234567893',
       role: 'User',
       year: '2023/2024',
@@ -116,7 +109,6 @@ export const useUserStore = defineStore('users', () => {
       id: 5,
       username: 'alice.brown',
       fullName: 'Alice Brown',
-      email: 'alice.brown@example.com',
       phone: '081234567894',
       role: 'User',
       year: '2024/2025',
@@ -148,8 +140,7 @@ export const useUserStore = defineStore('users', () => {
       const searchTerm = filters.value.search.toLowerCase()
       filtered = filtered.filter(user =>
         user.username.toLowerCase().includes(searchTerm) ||
-        user.fullName.toLowerCase().includes(searchTerm) ||
-        user.email.toLowerCase().includes(searchTerm)
+        user.fullName.toLowerCase().includes(searchTerm)
       )
     }
 
@@ -234,19 +225,11 @@ export const useUserStore = defineStore('users', () => {
         return null
       }
 
-      // Check if email already exists
-      const existingEmail = users.value.find(user => user.email === userData.email)
-      if (existingEmail) {
-        error.value = 'Email sudah digunakan'
-        return null
-      }
-
       // Create new user
       const newUser: User = {
         id: Math.max(...users.value.map(u => u.id)) + 1,
         username: userData.username,
         fullName: userData.fullName,
-        email: userData.email,
         phone: userData.phone,
         role: userData.role || 'User',
         year: '2024/2025', // Default year
@@ -279,17 +262,6 @@ export const useUserStore = defineStore('users', () => {
       if (userIndex === -1) {
         error.value = 'Pengguna tidak ditemukan'
         return null
-      }
-
-      // Check email uniqueness if email is being updated
-      if (updateData.email) {
-        const existingEmail = users.value.find(user => 
-          user.email === updateData.email && user.id !== userId
-        )
-        if (existingEmail) {
-          error.value = 'Email sudah digunakan'
-          return null
-        }
       }
 
       // Update user
@@ -382,13 +354,13 @@ export const useUserStore = defineStore('users', () => {
         try {
           // Check duplicates
           const existingUser = users.value.find(user => 
-            user.username === userData.username || user.email === userData.email
+            user.username === userData.username 
           )
 
           if (existingUser) {
             failed.push({
               data: userData,
-              error: existingUser.username === userData.username ? 'Username sudah digunakan' : 'Email sudah digunakan'
+              error: existingUser.username === userData.username ? 'Username sudah digunakan' : 'Username sudah digunakan'
             })
             continue
           }
@@ -398,7 +370,6 @@ export const useUserStore = defineStore('users', () => {
             id: Math.max(...users.value.map(u => u.id), 0) + 1,
             username: userData.username,
             fullName: userData.fullName,
-            email: userData.email,
             phone: userData.phone,
             role: userData.role || 'User',
             year: '2024/2025',

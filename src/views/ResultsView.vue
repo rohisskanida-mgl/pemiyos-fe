@@ -1,44 +1,43 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { ArrowLeft, BarChart3, PieChart as PieChartIcon } from 'lucide-vue-next'
+import { ref, computed, onMounted } from 'vue'
+import { ArrowLeft, BarChart3, PieChart as PieChartIcon, Loader2 } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import PieChart from '@/components/PieChart.vue'
 import ResultsBar from '@/components/ResultsBar.vue'
+import { useResultsStore } from '@/stores/results'
 
 const router = useRouter()
+const resultsStore = useResultsStore()
 const viewMode = ref<'chart' | 'bar'>('chart')
 
-// Sample results data for different positions
-const resultsData = ref({
-  'Ketua & Wakil': [
-    { name: 'John Doe', percentage: 45.2, votes: 1250 },
-    { name: 'Jane Smith', percentage: 32.8, votes: 907 },
-    { name: 'Mike Johnson', percentage: 22.0, votes: 608 },
-  ],
-  Sekretaris: [
-    { name: 'Alice Brown', percentage: 58.5, votes: 890 },
-    { name: 'Bob Wilson', percentage: 41.5, votes: 632 },
-  ],
-  Bendahara: [
-    { name: 'Carol Davis', percentage: 52.3, votes: 756 },
-    { name: 'David Miller', percentage: 47.7, votes: 689 },
-  ],
+// Load results on mount
+onMounted(async () => {
+  await resultsStore.loadResults()
+})
+
+// Transform results data for display
+const resultsData = computed(() => {
+  const data: Record<string, any[]> = {}
+  
+  resultsStore.results.positions.forEach(position => {
+    data[position.positionTitle] = position.candidates.map(candidate => ({
+      name: candidate.candidateName,
+      percentage: candidate.percentage,
+      votes: candidate.votes
+    }))
+  })
+  
+  return data
 })
 
 // Quick results - overall winners
 const quickResults = computed(() => {
-  const winners: any[] = []
-  Object.entries(resultsData.value).forEach(([position, candidates]) => {
-    const winner = candidates[0] // Already sorted by percentage
-    winners.push({
-      position,
-      winner: winner.name,
-      percentage: winner.percentage,
-      votes: winner.votes,
-    })
-  })
-  return winners
+  return resultsStore.quickResults
 })
+
+const isLoading = computed(() => resultsStore.isLoading)
+const hasError = computed(() => resultsStore.error)
+const participationStats = computed(() => resultsStore.participationStats)
 
 const toggleViewMode = () => {
   viewMode.value = viewMode.value === 'chart' ? 'bar' : 'chart'
@@ -90,7 +89,45 @@ const goBack = () => {
       </div>
     </header>
 
-    <!-- Hasil Cepat Section -->
+    <!-- Loading State -->
+    <div v-if="isLoading" class="flex flex-col items-center justify-center py-12">
+      <Loader2 class="w-8 h-8 text-primary animate-spin mb-4" />
+      <p class="text-text-dark">Memuat hasil voting...</p>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="hasError" class="bg-text-light rounded-xl shadow-sm p-6 text-center">
+      <p class="text-error mb-4">{{ hasError }}</p>
+      <button
+        @click="resultsStore.loadResults()"
+        class="px-4 py-2 bg-primary text-white rounded-lg hover:brightness-95"
+      >
+        Coba Lagi
+      </button>
+    </div>
+
+    <!-- Results Content -->
+    <template v-else>
+      <!-- Participation Stats -->
+      <div class="bg-gradient-to-r from-primary to-secondary rounded-xl shadow-sm p-4 text-white">
+        <h3 class="text-lg font-semibold mb-2">Statistik Partisipasi</h3>
+        <div class="grid grid-cols-3 gap-4">
+          <div class="text-center">
+            <p class="text-2xl font-bold">{{ participationStats.totalVoters }}</p>
+            <p class="text-xs opacity-90">Total Pemilih</p>
+          </div>
+          <div class="text-center">
+            <p class="text-2xl font-bold">{{ participationStats.totalVotes }}</p>
+            <p class="text-xs opacity-90">Sudah Memilih</p>
+          </div>
+          <div class="text-center">
+            <p class="text-2xl font-bold">{{ participationStats.participationRate }}%</p>
+            <p class="text-xs opacity-90">Partisipasi</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hasil Cepat Section -->
     <div class="bg-text-light rounded-xl shadow-sm p-4">
       <h3 class="text-lg font-semibold text-text-dark mb-4">Hasil Cepat</h3>
       <div class="space-y-3">
@@ -160,5 +197,6 @@ const goBack = () => {
         </div>
       </div>
     </div>
+    </template>
   </section>
 </template>

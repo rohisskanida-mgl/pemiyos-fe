@@ -53,7 +53,7 @@ export const useResultsStore = defineStore('results', () => {
   const isRealTimeEnabled = ref(false)
 
   // Real-time simulation
-  let realTimeInterval: NodeJS.Timeout | null = null
+  let realTimeInterval: number | null = null
 
   // Getters
   const filteredResults = computed(() => {
@@ -246,9 +246,6 @@ export const useResultsStore = defineStore('results', () => {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000))
 
-      // In a real app, this would generate and download the file
-      console.log(`Exporting results as ${format}`)
-      
       return true
     } catch (err) {
       error.value = `Terjadi kesalahan saat mengexport hasil sebagai ${format}`

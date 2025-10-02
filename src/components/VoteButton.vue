@@ -3,7 +3,7 @@ interface Candidate {
   id: number
   name: string
   positionNumber: number
-  photos: string[]
+  image: string[]
   profileHtml?: string
   visionHtml?: string
   missionHtml?: string

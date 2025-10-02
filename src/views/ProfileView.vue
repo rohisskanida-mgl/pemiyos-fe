@@ -1,17 +1,23 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { User, Bell, LogOut, Edit3 } from 'lucide-vue-next'
 import { useToast } from '@/composables/useToast'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
-const { success, error } = useToast()
+const { success } = useToast()
+const authStore = useAuthStore()
 
-const userData = {
-  name: 'John Doe',
-  role: 'Admin',
-  year: '2024/2025',
+const userData = computed(() => ({
+  name: authStore.userInfo.fullName || authStore.userInfo.nis,
+  nis: authStore.userInfo.nis,
+  role: authStore.userInfo.role === 'admin' ? 'Admin' : 'Voter',
+  class: authStore.userInfo.class || '-',
+  gender: authStore.userInfo.gender === 'L' ? 'Laki-laki' : 'Perempuan',
+  status: authStore.userInfo.status === 'active' ? 'Aktif' : 'Tidak Aktif',
   avatar: null,
-}
+}))
 
 const handleEditProfile = () => {
   router.push('/settings')
@@ -21,8 +27,8 @@ const handleHelp = () => {
   success('Fitur bantuan akan segera tersedia')
 }
 
-const handleLogout = () => {
-  // Handle logout logic here
+const handleLogout = async () => {
+  await authStore.logout()
   success('Logout berhasil')
   router.push('/login')
 }
@@ -47,7 +53,8 @@ const handleLogout = () => {
       </div>
 
       <h1 class="text-xl font-semibold text-text-dark">{{ userData.name }}</h1>
-      <p class="text-sm text-text-dark">{{ userData.role }} • {{ userData.year }}</p>
+      <p class="text-sm text-text-dark">{{ userData.role }} • {{ userData.class }}</p>
+      <p class="text-xs text-text-muted mt-1">NIS: {{ userData.nis }}</p>
     </div>
 
     <!-- Menu Cards -->

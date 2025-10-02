@@ -7,7 +7,6 @@ export interface User {
   id: string
   nis: string
   fullName: string
-  email?: string
   phone?: string
   role: 'admin' | 'voter'
   class?: string | null
@@ -23,7 +22,6 @@ export interface LoginCredentials {
 
 export interface ProfileUpdate {
   nama_lengkap?: string
-  email?: string
   phone?: string
   class?: string
 }
@@ -43,7 +41,6 @@ export const useAuthStore = defineStore('auth', () => {
   const userInfo = computed(() => ({
     nis: user.value?.nis || '',
     fullName: user.value?.fullName || '',
-    email: user.value?.email || '',
     phone: user.value?.phone || '',
     role: user.value?.role || 'voter',
     class: user.value?.class || '',
@@ -109,7 +106,6 @@ export const useAuthStore = defineStore('auth', () => {
       class: apiUser.class,
       gender: apiUser.gender,
       status: apiUser.status,
-      email: undefined,
       phone: undefined,
       avatar: undefined,
     }
@@ -232,6 +228,23 @@ export const useAuthStore = defineStore('auth', () => {
     return false
   }
 
+  const refreshProfile = async (): Promise<boolean> => {
+    try {
+      const apiUser = await authService.validateToken()
+      
+      if (apiUser) {
+        // Update user data from API
+        const userData = convertApiUser(apiUser)
+        saveUserData(userData)
+        user.value = userData
+        return true
+      }
+      return false
+    } catch (err) {
+      return false
+    }
+  }
+
   const clearError = () => {
     error.value = null
   }
@@ -254,6 +267,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     logout,
     updateProfile,
+    refreshProfile,
     checkAuth,
     clearError,
 

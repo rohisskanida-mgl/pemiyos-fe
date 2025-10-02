@@ -46,13 +46,20 @@ export interface LoginResponse {
 
 // Position Types
 export interface Position {
-  _id: string
-  position_id: number
-  name: string
+  id: string
+  positionId: number
+  title: string
   description?: string
-  status: 'active' | 'inactive'
-  created_at: string
-  updated_at: string
+  candidatesCount?: number
+  isActive: boolean
+  votingStartDate?: string
+  votingEndDate?: string
+  status?: 'active' | 'inactive'
+  _id?: string
+  position_id?: number
+  name?: string
+  created_at?: string
+  updated_at?: string
   deleted_at?: string
 }
 

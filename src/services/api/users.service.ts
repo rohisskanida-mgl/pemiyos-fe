@@ -78,10 +78,18 @@ class UsersService {
   /**
    * Get users count
    */
-  async getUsersCount(params?: Omit<QueryParams, 'is_count'>): Promise<{ count: number }> {
-    const queryString = buildQueryString({ ...params, is_count: true })
+  async getUsersCount(params?: QueryParams): Promise<{ count: number }> {
+    const queryString = params ? buildQueryString({ ...params, is_count: true }) : '?is_count=true'
     const response = await apiClient.get<{ count: number }>(`/api/users${queryString}`)
     return response.data
+  }
+
+  /**
+   * Get current user profile
+   */
+  async getCurrentUser(): Promise<{ data: User }> {
+    const response = await apiClient.get<User>('/api/auth/profile')
+    return { data: response.data }
   }
 
   /**

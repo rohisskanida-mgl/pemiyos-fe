@@ -1,102 +1,135 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { ArrowLeft, ChevronLeft, ChevronRight, Loader2 } from 'lucide-vue-next'
 import CandidateCarousel from '@/components/CandidateCarousel.vue'
 import Accordion from '@/components/Accordion.vue'
 import VoteButton from '@/components/VoteButton.vue'
 import Modal from '@/components/Modal.vue'
 import { useToast } from '@/composables/useToast'
+import { useVotingStore } from '@/stores/voting'
+import { useAuthStore } from '@/stores/auth'
+import type { Candidate } from '@/types/api.types'
 
 const router = useRouter()
 const route = useRoute()
-const { success } = useToast()
+const { success, error: showError } = useToast()
+const votingStore = useVotingStore()
+const authStore = useAuthStore()
 
-const positionId = computed(() => route.params.id as string)
+const positionId = computed(() => Number(route.params.id))
 const showConfirmModal = ref(false)
-const selectedCandidate = ref<(typeof candidates.value)[0] | null>(null)
-const selectedFocused = ref(1) // Start with candidate at index 1
+const selectedCandidate = ref<Candidate | null>(null)
+const selectedFocused = ref(0) // Start with first candidate
+const isLoading = ref(false)
+const isSubmitting = ref(false)
+const hasVoted = ref(false)
+const votedCandidateId = ref<string | null>(null)
 
-// Sample candidates data - in real app, this would come from API
-const candidates = ref([
-  {
-    id: 1,
-    name: 'John Doe',
-    positionNumber: 1,
-    photos: [
-      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop&crop=face',
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&h=300&fit=crop&crop=face',
+// Candidates from store
+const candidates = computed(() => {
+  const positionCandidates = votingStore.candidatesByPosition[positionId.value] || []
+  // Transform candidates for display - using the transformed structure
+  return positionCandidates.map(candidate => ({
+    id: candidate.id,  // Already transformed from _id
+    name: candidate.name,
+    positionNumber: candidate.positionNumber,  // Already transformed from candidate_number
+    image: candidate.image && candidate.image.length > 0 ? candidate.image : [
+      'https://via.placeholder.com/300x300/cccccc/666666?text=' + encodeURIComponent(candidate.name)
     ],
-    profileHtml:
-      '<p>Mahasiswa Teknik Informatika angkatan 2021. Aktif dalam berbagai organisasi kampus dan memiliki pengalaman kepemimpinan yang baik.</p>',
-    visionHtml:
-      '<p><strong>Visi:</strong> Menjadikan organisasi yang transparan, akuntabel, dan melayani seluruh anggota dengan sepenuh hati.</p>',
-    missionHtml:
-      '<p><strong>Misi:</strong><br>1. Meningkatkan kualitas pelayanan kepada anggota<br>2. Mengembangkan program-program yang bermanfaat<br>3. Menjalin komunikasi yang baik dengan semua pihak</p>',
-    programHtml:
-      '<p><strong>Program Kerja:</strong><br>• Digitalisasi sistem administrasi<br>• Program mentoring untuk anggota baru<br>• Kegiatan sosial dan pengabdian masyarakat<br>• Peningkatan fasilitas organisasi</p>',
-  },
-  {
-    id: 2,
-    name: 'Jane Smith',
-    positionNumber: 2,
-    photos: [
-      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop&crop=face',
-      'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=300&h=300&fit=crop&crop=face',
-    ],
-    profileHtml:
-      '<p>Mahasiswa Manajemen angkatan 2020. Berpengalaman dalam bidang administrasi dan organisasi.</p>',
-    visionHtml:
-      '<p><strong>Visi:</strong> Membangun organisasi yang efisien dan berdaya saing tinggi.</p>',
-    missionHtml:
-      '<p><strong>Misi:</strong><br>1. Mengoptimalkan sistem administrasi<br>2. Meningkatkan kinerja organisasi<br>3. Membangun jaringan yang luas</p>',
-    programHtml:
-      '<p><strong>Program Kerja:</strong><br>• Sistem informasi terintegrasi<br>• Pelatihan soft skills<br>• Kerjasama dengan pihak eksternal<br>• Evaluasi kinerja berkala</p>',
-  },
-  {
-    id: 3,
-    name: 'Mike Johnson',
-    positionNumber: 3,
-    photos: [
-      'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&h=300&fit=crop&crop=face',
-    ],
-    profileHtml:
-      '<p>Mahasiswa Ekonomi angkatan 2021. Memiliki kemampuan komunikasi yang baik dan pengalaman dalam bidang keuangan.</p>',
-    visionHtml:
-      '<p><strong>Visi:</strong> Menciptakan organisasi yang mandiri secara finansial dan transparan dalam pengelolaan keuangan.</p>',
-    missionHtml:
-      '<p><strong>Misi:</strong><br>1. Mengelola keuangan dengan transparan<br>2. Mencari sumber pendanaan alternatif<br>3. Mengoptimalkan penggunaan anggaran</p>',
-    programHtml:
-      '<p><strong>Program Kerja:</strong><br>• Sistem akuntansi digital<br>• Program fundraising<br>• Audit keuangan berkala<br>• Pelatihan manajemen keuangan</p>',
-  },
-])
+    profileHtml: `<p>${candidate.name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')} - ${candidate.profile || 'Profil tidak tersedia'}</p>`,
+    visionHtml: candidate.vision 
+      ? `<p>${candidate.vision.split('\n').map(m => ` ${m}`).join('<br>')}</p>`
+      : '<p>Visi tidak tersedia</p>',
+    missionHtml: candidate.mission
+      ? `<p>${candidate.mission.split('\n').map(m => ` ${m}`).join('<br>')}</p>`
+      : '<p>Misi tidak tersedia</p>',
+    programHtml: candidate.programKerja
+      ? `<p>${candidate.programKerja.split('\n').map(p => ` ${p}`).join('<br>')}</p>`
+      : '<p>Program kerja tidak tersedia</p>',
+  }))
+})
 
-const positionTitles: Record<string, string> = {
-  '1': 'Ketua & Wakil',
-  '2': 'Sekretaris',
-  '3': 'Bendahara',
-  '4': 'Humas',
-}
+// Get position title from store
+const currentPosition = computed(() => {
+  return votingStore.positions.find(p => p.positionId === positionId.value) || null
+})
 
 const currentPositionTitle = computed(() => {
-  return positionTitles[positionId.value] || 'Posisi Tidak Diketahui'
+  return currentPosition.value?.title || 'Posisi Tidak Diketahui'
 })
 
 const currentCandidate = computed(() => {
+  if (candidates.value.length === 0) {
+    return null
+  }
   return candidates.value[selectedFocused.value] || candidates.value[0]
 })
 
-const handleVote = (candidate: (typeof candidates.value)[0]) => {
-  selectedCandidate.value = candidate
-  showConfirmModal.value = true
+// Load candidates and check if user has voted
+onMounted(async () => {
+  isLoading.value = true
+  try {
+    // Load candidates for this position
+    await votingStore.loadCandidates(positionId.value)
+    
+    // Check if user has already voted for this position
+    const userVotes = await votingStore.getUserVotes()
+    const existingVote = userVotes.find(v => v.position_id === positionId.value)
+    
+    if (existingVote) {
+      hasVoted.value = true
+      votedCandidateId.value = existingVote.candidate_id
+      // Find and select the voted candidate
+      const votedIndex = candidates.value.findIndex(c => c.id === existingVote.candidate_id)
+      if (votedIndex !== -1) {
+        selectedFocused.value = votedIndex
+      }
+    }
+  } catch (err: any) {
+    showError(err.message || 'Failed to load candidates')
+  } finally {
+    isLoading.value = false
+  }
+})
+
+const handleVote = (candidate: any) => {
+  if (!candidate) return
+
+  // Find the original candidate data using the transformed id
+  const originalCandidate = votingStore.candidatesByPosition[positionId.value]?.find(
+    c => c.id === candidate.id
+  )
+  if (originalCandidate) {
+    selectedCandidate.value = originalCandidate
+    showConfirmModal.value = true
+  }
 }
 
-const confirmVote = () => {
-  if (selectedCandidate.value) {
-    success(`Vote untuk ${selectedCandidate.value.name} berhasil!`)
+const confirmVote = async () => {
+  if (!selectedCandidate.value) return
+  
+  isSubmitting.value = true
+  try {
+    await votingStore.submitVote(positionId.value, selectedCandidate.value.id)
+    
+    // Update UI to show vote has been cast/changed
+    hasVoted.value = true
+    votedCandidateId.value = selectedCandidate.value.id
+    
+    success(
+      hasVoted.value 
+        ? `Vote berhasil diubah ke ${selectedCandidate.value.name}!`
+        : `Vote untuk ${selectedCandidate.value.name} berhasil!`
+    )
     showConfirmModal.value = false
-    // Navigate back to voting page
-    router.push('/vote')
+    
+    // Stay on the page to allow changing vote
+    // router.push('/vote')
+  } catch (err: any) {
+    showError(err.message || 'Gagal menyimpan vote')
+  } finally {
+    isSubmitting.value = false
   }
 }
 
@@ -110,17 +143,19 @@ const goBack = () => {
 }
 
 const goToPrevious = () => {
+  if (candidates.value.length === 0) return
   selectedFocused.value =
     selectedFocused.value === 0 ? candidates.value.length - 1 : selectedFocused.value - 1
 }
 
 const goToNext = () => {
+  if (candidates.value.length === 0) return
   selectedFocused.value = (selectedFocused.value + 1) % candidates.value.length
 }
 
 // For infinite rotation, navigation buttons are always enabled
-const canGoPrevious = computed(() => true)
-const canGoNext = computed(() => true)
+const canGoPrevious = computed(() => candidates.value.length > 0)
+const canGoNext = computed(() => candidates.value.length > 0)
 </script>
 
 <template>
@@ -137,14 +172,32 @@ const canGoNext = computed(() => true)
       </div>
     </div>
 
+    <!-- Loading State -->
+    <div v-if="isLoading" class="flex-1 flex items-center justify-center">
+      <div class="text-center">
+        <Loader2 class="w-8 h-8 text-primary animate-spin mx-auto mb-4" />
+        <p class="text-text-dark">Memuat data kandidat...</p>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div v-else-if="!isLoading && candidates.length === 0" class="flex-1 flex items-center justify-center px-4">
+      <div class="text-center">
+        <p class="text-text-dark mb-4">Tidak ada kandidat untuk posisi ini</p>
+        <button @click="goBack" class="px-4 py-2 bg-primary text-white rounded-lg">
+          Kembali
+        </button>
+      </div>
+    </div>
+
     <!-- Main Content -->
-    <div class="flex-1 pb-20">
+    <div v-else class="flex-1 pb-20">
       <!-- Candidate Carousel -->
       <CandidateCarousel :candidates="candidates" v-model="selectedFocused" />
 
       <!-- Accordion -->
       <div class="px-4 mb-6">
-        <Accordion :candidate="currentCandidate" />
+        <Accordion v-if="currentCandidate" :candidate="currentCandidate" />
       </div>
     </div>
 
@@ -162,7 +215,32 @@ const canGoNext = computed(() => true)
 
         <!-- Center Vote Button -->
         <div class="flex-1 max-w-xs mx-4">
-          <VoteButton :candidate="currentCandidate" @vote="handleVote" />
+          <button
+            @click="handleVote(currentCandidate)"
+            :disabled="isSubmitting || !currentCandidate"
+            class="w-full py-3 px-6 rounded-lg font-medium transition-all"
+            :class="[
+              votedCandidateId === currentCandidate?.id
+                ? 'bg-success-accent text-white'
+                : hasVoted
+                ? 'bg-warn-accent text-white hover:brightness-95'
+                : 'bg-primary text-white hover:brightness-95'
+            ]"
+          >
+            <span v-if="isSubmitting" class="flex items-center justify-center gap-2">
+              <Loader2 class="w-4 h-4 animate-spin" />
+              Menyimpan...
+            </span>
+            <span v-else-if="votedCandidateId === currentCandidate?.id">
+              ✓ Sudah Dipilih
+            </span>
+            <span v-else-if="hasVoted">
+              Ubah Pilihan
+            </span>
+            <span v-else>
+              Pilih Kandidat
+            </span>
+          </button>
         </div>
 
         <!-- Right Navigation -->

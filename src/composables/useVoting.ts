@@ -156,9 +156,9 @@ export function useVoting() {
     return candidate?.positionNumber || 0
   }
 
-  const getCandidatePhotos = (candidateId: number): string[] => {
+  const getCandidateImage = (candidateId: number): string[] => {
     const candidate = getCandidateById(candidateId)
-    return candidate?.photos || []
+    return candidate?.image || []
   }
 
   const getCandidateProfile = (candidateId: number): string | undefined => {
@@ -286,7 +286,7 @@ export function useVoting() {
     // Candidate helpers
     getCandidateName,
     getCandidatePositionNumber,
-    getCandidatePhotos,
+    getCandidateImage,
     getCandidateProfile,
     getCandidateVision,
     getCandidateMission,

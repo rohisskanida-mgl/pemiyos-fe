@@ -1,19 +1,62 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { Users, Briefcase, CheckCircle, Clock, Shield, Smartphone } from 'lucide-vue-next'
+import { Users, Briefcase, CheckCircle, Clock, Shield, Smartphone, Loader2 } from 'lucide-vue-next'
 import AppFooter from '@/components/Footer.vue'
+import { usersService, votingService, resultsService } from '@/services/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
-// Mock stats data
-const stats = ref([
-  { label: 'Total Pemilih', value: '250', icon: Users, color: 'info-accent' },
-  { label: 'Posisi Tersedia', value: '4', icon: Briefcase, color: 'secondary' },
-  { label: 'Sudah Memilih', value: '180', icon: CheckCircle, color: 'success-accent' },
+const isLoading = ref(true)
+const totalVoters = ref(0)
+const totalPositions = ref(0)
+const totalVoted = ref(0)
+
+// Computed stats
+const stats = computed(() => [
+  { label: 'Total Pemilih', value: totalVoters.value.toString(), icon: Users, color: 'info-accent' },
+  { label: 'Posisi Tersedia', value: totalPositions.value.toString(), icon: Briefcase, color: 'secondary' },
+  { label: 'Sudah Memilih', value: totalVoted.value.toString(), icon: CheckCircle, color: 'success-accent' },
 ])
+
+// Load statistics
+const loadStatistics = async () => {
+  isLoading.value = true
+  try {
+    // Get total voters
+    const votersCount = await usersService.getUsersCount({ role: 'voter' })
+    totalVoters.value = votersCount.count || 0
+
+    // Get positions
+    const positionsResponse = await votingService.getPositions({ 
+      status: 'active',
+      limit: 'no_limit' 
+    })
+    totalPositions.value = positionsResponse.data.length
+
+    // Get voting statistics for each position
+    let votedCount = 0
+    for (const position of positionsResponse.data) {
+      try {
+        const stats = await resultsService.getPositionStatistics(position.position_id)
+        votedCount += stats.total_votes
+      } catch (err) {
+        // Continue even if one position fails
+      }
+    }
+    totalVoted.value = votedCount
+  } catch (err) {
+    console.error('Failed to load statistics:', err)
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(() => {
+  loadStatistics()
+})
 
 const features = ref([
   {

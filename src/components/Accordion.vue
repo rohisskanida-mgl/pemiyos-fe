@@ -6,7 +6,7 @@ interface Candidate {
   id: number
   name: string
   positionNumber: number
-  photos: string[]
+  image: string[]
   profileHtml?: string
   visionHtml?: string
   missionHtml?: string
@@ -21,7 +21,8 @@ const props = defineProps<Props>()
 
 const sections = ref([
   { key: 'profileHtml', title: 'Profil Kandidat', open: false },
-  { key: 'visionHtml', title: 'Visi & Misi', open: false },
+  { key: 'visionHtml', title: 'Visi', open: false },
+  { key: 'missionHtml', title: 'Misi', open: false },
   { key: 'programHtml', title: 'Program Kerja', open: false },
 ])
 
